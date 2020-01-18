@@ -1,0 +1,196 @@
+<html>
+    <body>
+        <div id="header">
+            <h1>Sorting Algorithm Visualizer</h1>
+        </div>
+        <div id="controls" style="float: right;">
+            Input Size: <input id="input-range" type="range" min="5" max="500" value="50">
+
+            <button onclick="newArrays()">New array</button>
+        </div>
+        Bubble Sort
+        <button onclick="bubbleSort(bubbleArray)">Sort</button>
+        <div id="bubble-area" style="display: flex;">
+
+        </div>
+        Insertion Sort
+        <button onclick="insertSort(insertionArray)">Sort</button>
+        <div id="insertion-area" style="display: flex;">
+
+        </div>
+        Merge Sort
+        <button onclick="mergeSort(mergeArray)">Sort</button>
+        <div id="merge-area" style="display: flex;">
+
+        </div>
+    </body>
+</html>
+
+<script>
+let sizeSlider = document.getElementById("input-range");
+let numItems = sizeSlider.value;
+let speed = 500;
+let width = 800;
+
+let bubbleArray = [];
+let bubbleColors = [];
+let bubbleArea = document.getElementById("bubble-area");
+
+let insertionArray = [];
+let insertionColors = [];
+let insertionArea = document.getElementById("insertion-area");
+
+let mergeArray = [];
+let mergeColors = [];
+let mergeArea = document.getElementById("merge-area");
+
+sizeSlider.oninput = function() {
+    numItems = this.value;
+    newArrays();
+}
+
+let newArrays = function() {
+    mergeArray = [];
+    insertionArray = [];
+    bubbleArray = [];
+    createRecs('insert', insertionArray, insertionColors, insertionArea);
+    createRecs('merge', mergeArray, mergeColors, mergeArea);
+    createRecs('bubble', bubbleArray, bubbleColors, bubbleArea);
+}
+
+let createRecs = function(type, arr, colors, area) {
+    area.innerHTML = '';
+    for(let i = 0; i < numItems; i++) {
+        let val = Math.floor(Math.random() * 90) + 10;
+        colors.push('white');
+        let newDiv = `<div id="${type}-bar-${i}" style="width: ${width/numItems}px; height: ${val}px; border: 1px solid #000; background-color: ${colors[i]}"></div>`;
+        area.innerHTML += newDiv;
+        arr.push(val);
+    }
+}
+newArrays();
+
+let redraw = function(type, arr, colors, area) {
+    area.innerHTML = '';
+    for(let i = 0; i < numItems; i++) {
+        //let val = Math.floor(Math.random() * 90) + 10;
+        let val = arr[i];
+        let newDiv = `<div id="${type}-bar-${i}" style="width: ${width/numItems}px; height: ${val}px; border: 1px solid #000; background-color: ${colors[i]}"></div>`;
+        //let newDiv = divArray[i];
+        area.innerHTML += newDiv;
+    }
+}
+
+let swapItems = function(type, arr, index1, index2) {
+    let i1bar = document.getElementById(`${type}-bar-${index1}`);
+    let i2bar = document.getElementById(`${type}-bar-${index2}`);
+
+    [arr[index1], arr[index2]] = [arr[index2], arr[index1]];
+    i1bar.style["height"] = `${arr[index1]}px`;
+    i2bar.style["height"] = `${arr[index2]}px`;
+}
+
+let insertSort = function(arr) {
+    for(let i = 1; i < arr.length; i++) {
+        let outer = setTimeout(() => {
+            insertionColors[i] = 'green';
+            for(let j = 0; j < i; j++) {
+                let inner = setTimeout(() => {
+                    insertionColors[j] = 'blue';
+                    if(arr[j] > arr[i]) {
+                        swapItems('insert', arr, j, i);
+                        redraw('insert', arr, insertionColors, insertionArea);
+                    }
+                }, speed);
+                let inner2 = setInterval(() => {
+                    insertionColors[j] = 'white';
+                }, speed);
+            }
+        }, speed*i);
+        let outer2 = setTimeout(() => {
+            insertionColors[i] = 'white';
+        }, speed*i);
+    }
+    return arr;
+}
+
+
+let bubbleSort = function(arr) {
+    for(let i = 0; i < arr.length - 1; i++) {
+        //setTimeout(() => {
+            for(let j = 0; j < arr.length - i - 1; j++) {
+                setTimeout(() => {
+                    bubbleColors[j] = 'green';
+                    bubbleColors[j+1] = 'blue';
+                    redraw('bubble', arr, bubbleColors, bubbleArea);
+                    setTimeout(() => {
+                        if(arr[j] > arr[j+1]) {
+                            setTimeout(() => {
+                                swapItems('bubble', arr, j, j+1);
+                                redraw('bubble', arr, bubbleColors, bubbleArea);
+                            }, speed / 4);
+                        }
+                    }, speed / 2);
+                }, speed);
+                setTimeout(() => {
+                    bubbleColors[j] = 'white';
+                    bubbleColors[j+1] = 'white';
+                }, speed);
+            }
+        //}, speed*i);
+    }
+}
+
+
+
+
+
+
+
+/*
+let mSort = function(arr, start, end) {
+    if(start < end) {
+        let mid = Math.floor((start + end) / 2);
+        mSort(arr, start, mid);
+        mSort(arr, mid+1, end);
+        merge2(arr, start, mid, end);
+    }
+    return arr;
+}
+
+let merge2 = function(arr, start, mid, end) {
+
+    let i = start;
+    let j = mid+1;
+
+    //already sorted
+    if(arr[mid] <= arr[j])
+        return;
+
+    // Combine sorted arrays: A[start...mid] and A[mid+1...end]
+    while(i <= mid && j <= end) {
+        setTimeout(() => {
+            if(arr[i] <= arr[j]) {
+                i++;
+            } else {
+                //let val = arr[j];
+                let ind = j;
+                while(ind !== i) {
+                    arr[ind] = arr[ind-1];
+                    ind--;
+                }
+                //arr[i] = val;
+                swapItems('merge', arr, j, i);
+                redraw('merge');
+                i++;
+                mid++;
+                j++;
+            }
+        }, speed*(i-start));
+    }
+}
+
+let mergeSort = function(arr) {
+    return mSort(arr, 0, arr.length-1);
+}*/
+</script>
