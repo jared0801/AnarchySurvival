@@ -1,34 +1,56 @@
-<div id="signDiv">
-    Username: <input id="signDiv-username" type="text">
-    Password: <input id="signDiv-password" type="password">
-    <button id="signDiv-signIn">Sign In</button>
-    <button id="signDiv-signUp">Sign Up</button>
-</div>
-
-
-<div id="gameDiv" style="display: none">
-    <div id="game" style="position: absolute; width: 640px; height: 480px">  
-        <canvas id="ctx" width="640" height="480" style="position: absolute; border:1px solid #000000;"></canvas>
-        <canvas id="ctx-ui" width="640" height="480" style="position: absolute; border:1px solid #000000;"></canvas>
-
-        <div id="ui" style="position: absolute; width: 640px; height: 480px">
-            <button onclick="changeMap()" style="position: absolute; bottom: 0px; left: 0px">
-                Change Map
-            </button>
-
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, user-scalable=no" />
+        <link rel="stylesheet" href="client/styles.css">
+    </head>
+    <body>
+        <div id="signDiv">
+            Username: <input id="signDiv-username" type="text">
+            Password: <input id="signDiv-password" type="password">
+            <button id="signDiv-signIn">Sign In</button>
+            <button id="signDiv-signUp">Sign Up</button>
         </div>
-    </div>
 
-    <div id="belowGame" style="margin-top: 500px">
-        <div id="chat-text" style="width: 640px; height: 100px; overflow-y: scroll">
-            <div>Hello!</div>
+
+        <div id="gameDiv" style="display: none">
+            <div id="game" style="position: absolute">  
+                <canvas id="ctx" width="640" height="480"></canvas>
+                <canvas id="ctx-ui" width="640" height="480"></canvas>
+
+                <div id="ui">
+
+                    <div class="movementBtn" id="moveLeft">
+                        Left
+                    </div>
+                    <div class="movementBtn" id="moveUp">
+                        Up
+                    </div>
+                    <div class="movementBtn" id="moveRight">
+                        Right
+                    </div>
+                    <div class="movementBtn" id="moveDown">
+                        Down
+                    </div>
+
+                    <button onclick="changeMap()" style="position: absolute; bottom: 0px; right: 0px">
+                        Change Map
+                    </button>
+
+                </div>
+            </div>
+
+            <div id="belowGame">
+                <div id="chat-text">
+                    <div>Hello!</div>
+                </div>
+                <div id="inventory"></div>
+                <form id="chat-form">
+                    <input id="chat-input" type="text">
+                </form>
+            </div>
         </div>
-        <div id="inventory"></div>
-        <form id="chat-form">
-            <input id="chat-input" type="text" style="width: 640px">
-        </form>
-    </div>
-</div>
+    </body>
+</html>
 
 <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script> -->
 
@@ -36,8 +58,8 @@
 <script src="/client/js/Inventory.js"></script>
 
 <script>
-    const WIDTH = 640;
-    const HEIGHT = 480;
+    let WIDTH = window.innerWidth;
+    let HEIGHT = Math.min(Math.floor(WIDTH * 0.8), Math.floor(window.innerHeight * 0.8));
     let socket = io();
 
     // Sign
@@ -110,6 +132,14 @@
         inventory.refreshRender();
     })
 
+    // Key codes
+    let KeyCodes = {
+        'right': 68, // maps to the d key
+        'down': 83, // maps to s
+        'left': 65, // maps to a
+        'up': 87 // maps to w
+    }
+
 
     // Game
     var Img = {};
@@ -127,6 +157,10 @@
     let ctx = document.getElementById("ctx").getContext("2d");
     let ctxUI = document.getElementById("ctx-ui").getContext("2d");
     ctxUI.font = '30px Arial';
+    ctx.canvas.width = WIDTH;
+    ctx.canvas.height = HEIGHT;
+    ctxUI.canvas.width = WIDTH;
+    ctxUI.canvas.height = HEIGHT;
 
     let Player = function(initPack) {
         let self = {};
@@ -250,7 +284,7 @@
         // Only draw once the player is logged in
         if(!selfId) return;
 
-        ctx.clearRect(0, 0, 640, 480);
+        ctx.clearRect(0, 0, WIDTH, HEIGHT);
         drawMap();
         drawScore();
         for(let i in Player.list) {
@@ -272,36 +306,89 @@
         if(lastScore === Player.list[selfId].score) return;
 
         lastScore = Player.list[selfId].score;
-        ctxUI.clearRect(0, 0, 640, 480);
+        ctxUI.clearRect(0, 0, WIDTH, HEIGHT);
         ctxUI.fillStyle = 'white';
         ctxUI.fillText(Player.list[selfId].score, 0, 30);
     }
     let lastScore = null;
 
+    let goLeft = function() {
+        socket.emit('keyPress', { inputId: 'left', state: true });
+    }
+    let stopLeft = function() {
+        socket.emit('keyPress', { inputId: 'left', state: false });
+    }
+    let goRight = function() {
+        socket.emit('keyPress', { inputId: 'right', state: true });
+    }
+    let stopRight = function() {
+        socket.emit('keyPress', { inputId: 'right', state: false });
+    }
+    let goUp = function() {
+        socket.emit('keyPress', { inputId: 'up', state: true });
+    }
+    let stopUp = function() {
+        socket.emit('keyPress', { inputId: 'up', state: false });
+    }
+    let goDown = function() {
+        socket.emit('keyPress', { inputId: 'down', state: true });
+    }
+    let stopDown = function() {
+        socket.emit('keyPress', { inputId: 'down', state: false });
+    }
+
     document.onkeydown = function(event) {
-        if(event.keyCode === 68) // d
-            socket.emit('keyPress', { inputId: 'right', state: true });
-        else if(event.keyCode === 83) // s
-            socket.emit('keyPress', { inputId: 'down', state: true });
-        else if(event.keyCode === 65) // a
-            socket.emit('keyPress', { inputId: 'left', state: true });
-        else if(event.keyCode === 87) // w
-            socket.emit('keyPress', { inputId: 'up', state: true });
+        if(event.keyCode === KeyCodes['right']) // d
+            goRight();
+        else if(event.keyCode === KeyCodes['down']) // s
+            goDown();
+        else if(event.keyCode === KeyCodes['left']) // a
+            goLeft();
+        else if(event.keyCode === KeyCodes['up']) // w
+            goUp();
     }
 
     document.onkeyup = function(event) {
-        if(event.keyCode === 68) // d
-            socket.emit('keyPress', { inputId: 'right', state: false });
-        else if(event.keyCode === 83) // s
-            socket.emit('keyPress', { inputId: 'down', state: false });
-        else if(event.keyCode === 65) // a
-            socket.emit('keyPress', { inputId: 'left', state: false });
-        else if(event.keyCode === 87) // w
-            socket.emit('keyPress', { inputId: 'up', state: false });
+        if(event.keyCode === KeyCodes['right']) // d
+            stopRight();
+        else if(event.keyCode === KeyCodes['down']) // s
+            stopDown();
+        else if(event.keyCode === KeyCodes['left']) // a
+            stopLeft();
+        else if(event.keyCode === KeyCodes['up']) // w
+            stopUp();
+    }
+
+    document.ontouchstart = function(event) {
+        if(event.target.id === 'ui') {
+            // Attack when tapping on screen
+            socket.emit('keyPress', { inputId: 'attack', state: true });
+        }
+        else if(event.target.id === 'moveRight')
+            goRight();
+        else if(event.target.id === 'moveDown')
+            goDown();
+        else if(event.target.id === 'moveLeft')
+            goLeft();
+        else if(event.target.id === 'moveUp')
+            goUp();
     }
 
     document.onmousedown = function(event) {
         socket.emit('keyPress', { inputId: 'attack', state: true });
+    }
+
+    document.ontouchend = function(event) {
+        if(event.target.id === 'ui')
+            socket.emit('keyPress', { inputId: 'attack', state: false });
+        else if(event.target.id === 'moveRight')
+            stopRight();
+        else if(event.target.id === 'moveDown')
+            stopDown();
+        else if(event.target.id === 'moveLeft')
+            stopLeft();
+        else if(event.target.id === 'moveUp')
+            stopUp();
     }
 
     document.onmouseup = function(event) {
@@ -309,12 +396,34 @@
     }
 
     document.onmousemove = function(event) {
-        let xStart = 640;
-        let yStart = 480;
-        var x = -(640/2) + event.clientX;
-        var y = -(480/2) + event.clientY;
+        var x = -(WIDTH/2) + event.clientX;
+        var y = -(HEIGHT/2) + event.clientY;
         var angle = Math.atan2(y, x) / Math.PI * 180;
         socket.emit('keyPress', { inputId: 'mouseAngle', state: angle });
     }
+
+    document.ontouchmove = function(event) {
+
+        if(event.target.id !== 'ui') return;
+        let clientX = event.touches[0].clientX;
+        let clientY = event.touches[0].clientY;
+        //console.log(event);
+        var x = -(WIDTH/2) + clientX;
+        var y = -(HEIGHT/2) + clientY;
+        var angle = Math.atan2(y, x) / Math.PI * 180;
+        socket.emit('keyPress', { inputId: 'mouseAngle', state: angle });
+    }
+
+    window.addEventListener('resize', event => {
+        WIDTH = window.innerWidth;
+        HEIGHT = Math.min(Math.floor(WIDTH * 0.8), Math.floor(window.innerHeight * 0.8));
+        ctx.canvas.width = WIDTH;
+        ctx.canvas.height = HEIGHT;
+        ctxUI.canvas.width = WIDTH;
+        ctxUI.canvas.height = HEIGHT;
+    })
+
+    // Disable right click
+    document.addEventListener('contextmenu', event => event.preventDefault());
 
 </script>

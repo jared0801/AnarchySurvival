@@ -56,6 +56,7 @@ Player = function(param) {
     let self = Entity(param);
     self.number = "" + Math.floor(10* Math.random());
     self.username = param.username;
+    self.socket = param.socket;
     self.pressingRight = false;
     self.pressingLeft = false;
     self.pressingUp = false;
@@ -66,7 +67,6 @@ Player = function(param) {
     self.hp = 10;
     self.hpMax = 10;
     self.score = 0;
-    console.log(param.progress);
     self.inventory = new Inventory(param.progress.items, param.socket, true);
 
     self.inventory.addItem('potion', 1);
@@ -150,6 +150,7 @@ Player.onConnect = function(socket, username, progress) {
         progress
     });
 
+    // Check if player has items
     player.inventory.refreshRender();
 
     socket.on('keyPress', (data) => {

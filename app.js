@@ -1,5 +1,7 @@
 let express = require('express');
 
+require('dotenv').config();
+
 require('./Database');
 require('./Entity');
 require('./client/js/Inventory');

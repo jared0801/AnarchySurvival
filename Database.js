@@ -1,4 +1,4 @@
-const USE_DB = true;
+const USE_DB = process.env.DB_PATH ? true : false;
 
 let mongojs = USE_DB ? require('mongojs') : null;
 let db = USE_DB ? mongojs(process.env.DB_PATH, ['account', 'progress']) : null;
@@ -46,7 +46,7 @@ Database.getPlayerProgress = function(username, cb) {
     db.progress.findOne({ username: username }, function(err, res) {
         if(err)
             console.log(err);
-        else if(!res)
+        if(!res)
             return cb({ items: [] })
         else
             return cb({ items: res.items });
@@ -56,10 +56,5 @@ Database.getPlayerProgress = function(username, cb) {
 Database.savePlayerProgress = function(data, cb) {
     cb = cb || function() {}
     if(!USE_DB) return cb();
-    console.log('saving: ' + data.username);
-    db.progress.update({ username: data.username }, { $set: data }, { upsert: true }, function(err, count, status) {
-        console.log('updated ' + count + ' items');
-        console.log('err: ' + err);
-        console.log('status: ' + status);
-    });
+    db.progress.update({ username: data.username }, { $set: data }, { upsert: true }, cb);
 }
