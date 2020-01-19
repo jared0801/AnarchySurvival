@@ -7,18 +7,33 @@
 
 
 <div id="gameDiv" style="display: none">
-    <canvas id="ctx" width="640" height="480" style="border:1px solid #000000;"></canvas>
+    <div id="game" style="position: absolute; width: 640px; height: 480px">  
+        <canvas id="ctx" width="640" height="480" style="position: absolute; border:1px solid #000000;"></canvas>
+        <canvas id="ctx-ui" width="640" height="480" style="position: absolute; border:1px solid #000000;"></canvas>
 
-    <div id="chat-text" style="width: 640px; height: 100px; overflow-y: scroll">
-        <div>Hello!</div>
+        <div id="ui" style="position: absolute; width: 640px; height: 480px">
+            <button onclick="changeMap()" style="position: absolute; bottom: 0px; left: 0px">
+                Change Map
+            </button>
+
+        </div>
     </div>
 
-    <form id="chat-form">
-        <input id="chat-input" type="text" style="width: 640px">
-    </form>
+    <div id="belowGame" style="margin-top: 500px">
+        <div id="chat-text" style="width: 640px; height: 100px; overflow-y: scroll">
+            <div>Hello!</div>
+        </div>
+        <div id="inventory"></div>
+        <form id="chat-form">
+            <input id="chat-input" type="text" style="width: 640px">
+        </form>
+    </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script> -->
+
+<script src="/client/js/socket.js"></script>
+<script src="/client/js/Inventory.js"></script>
 
 <script>
     const WIDTH = 640;
@@ -70,10 +85,30 @@
         e.preventDefault(); // don't refresh the page
         if(chatInput.value[0] === '/')
             socket.emit('evalServer', chatInput.value.slice(1))
-        else
+        else if(chatInput.value[0] === '@') {
+            //@username message
+            let firstSpace = chatInput.value.indexOf(' ');
+            let username = chatInput.value.slice(1, firstSpace);
+            let message = chatInput.value.slice(firstSpace + 1);
+            socket.emit('sendPmToServer', {
+                username,
+                message
+            });
+        } else
             socket.emit('sendMsgToServer', chatInput.value);
         chatInput.value = '';
     }
+
+    // UI
+    let changeMap = function() {
+        socket.emit('changeMap');
+    }
+
+    let inventory = new Inventory([], socket, false);
+    socket.on('updateInventory', (items) => {
+        inventory.items = items;
+        inventory.refreshRender();
+    })
 
 
     // Game
@@ -82,11 +117,16 @@
     Img.player.src = '/client/img/player.png';
     Img.bullet = new Image();
     Img.bullet.src = '/client/img/bullet.png';
-    Img.map = new Image();
-    Img.map.src = '/client/img/map.png';
+
+    Img.map = {};
+    Img.map['field'] = new Image();
+    Img.map['field'].src = '/client/img/map.png';
+    Img.map['forest'] = new Image();
+    Img.map['forest'].src = '/client/img/map2.png';
 
     let ctx = document.getElementById("ctx").getContext("2d");
-    ctx.font = '30px Arial';
+    let ctxUI = document.getElementById("ctx-ui").getContext("2d");
+    ctxUI.font = '30px Arial';
 
     let Player = function(initPack) {
         let self = {};
@@ -97,8 +137,11 @@
         self.hp = initPack.hp;
         self.hpMax = initPack.hpMax;
         self.score = initPack.score;
+        self.map = initPack.map;
 
         self.draw = function() {
+            // Only show players on the same map
+            if(Player.list[selfId].map !== self.map) return;
 
             let x = self.x - Player.list[selfId].x + WIDTH/2;
             let y = self.y - Player.list[selfId].y + HEIGHT/2;
@@ -130,8 +173,12 @@
         self.id = initPack.id;
         self.x = initPack.x;
         self.y = initPack.y;
+        self.map = initPack.map;
 
         self.draw = function() {
+            // Only show bullets on the same map
+            if(Player.list[selfId].map !== self.map) return;
+
             let width = Img.bullet.width / 2; // Makes image 2x smaller
             let height = Img.bullet.height / 2;
 
@@ -173,6 +220,8 @@
                     p.hp = pack.hp;
                 if(p.score !== undefined)
                     p.score = pack.score;
+                if(p.map !== undefined)
+                    p.map = pack.map;
             }
         }
         for(let i = 0; i < data.bullet.length; i++) {
@@ -213,15 +262,21 @@
     }, 40);
 
     let drawMap = function() {
-        let x = WIDTH/2 - Player.list[selfId].x;
-        let y = HEIGHT/2 - Player.list[selfId].y;
-        ctx.drawImage(Img.map, x, y);
+        let player = Player.list[selfId];
+        let x = WIDTH/2 - player.x;
+        let y = HEIGHT/2 - player.y;
+        ctx.drawImage(Img.map[player.map], x, y);
     }
 
     let drawScore = function() {
-        ctx.fillStyle = 'white';
-        ctx.fillText(Player.list[selfId].score, 0, 30);
+        if(lastScore === Player.list[selfId].score) return;
+
+        lastScore = Player.list[selfId].score;
+        ctxUI.clearRect(0, 0, 640, 480);
+        ctxUI.fillStyle = 'white';
+        ctxUI.fillText(Player.list[selfId].score, 0, 30);
     }
+    let lastScore = null;
 
     document.onkeydown = function(event) {
         if(event.keyCode === 68) // d
