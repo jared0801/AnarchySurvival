@@ -25,11 +25,14 @@ body {
 }
 
 .movementBtn {
+    -webkit-tap-highlight-color:  rgba(255, 255, 255, 0);
     display: none;
     background-color: lightgray;
     border: 1px solid black;
     border-radius: 2px;
-    padding: 2px;
+    padding: 5px;
+    width: 40px;
+    text-align: center;
 }
 
 #moveLeft {
@@ -40,20 +43,20 @@ body {
 
 #moveUp {
     position: absolute;
-    bottom: 70px;
-    left: 43px;
+    bottom: 85px;
+    left: 60px;
 }
 
 #moveRight {
     position: absolute;
     bottom: 48px;
-    left: 75px;
+    left: 115px;
 }
 
 #moveDown {
     position: absolute;
-    bottom: 25px;
-    left: 34px;
+    bottom: 12px;
+    left: 60px;
 }
 
 #chat-input {
