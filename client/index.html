@@ -5,10 +5,17 @@
     </head>
     <body>
         <div id="signDiv">
-            Username: <input id="signDiv-username" type="text">
-            Password: <input id="signDiv-password" type="password">
-            <button id="signDiv-signIn">Sign In</button>
-            <button id="signDiv-signUp">Sign Up</button>
+            <h1>Anarchy Survivor!</h1>
+            <div id="usernameDiv">
+                Username: <input id="signDiv-username" type="text">
+            </div>
+            <div id="passwordDiv">
+                Password: <input id="signDiv-password" type="password">
+            </div>
+            <div id="buttonDiv">
+                <button id="signDiv-signIn">Sign In</button>
+                <button id="signDiv-signUp">Sign Up</button>
+            </div>
         </div>
 
 
@@ -41,11 +48,10 @@
 
             <div id="belowGame">
                 <div id="chat-text">
-                    <div>Hello!</div>
                 </div>
                 <div id="inventory"></div>
                 <form id="chat-form">
-                    <input id="chat-input" type="text">
+                    <input id="chat-input" type="text" placeholder="Type here to chat...">
                 </form>
             </div>
         </div>
@@ -59,7 +65,7 @@
 
 <script>
     let WIDTH = window.innerWidth;
-    let HEIGHT = Math.min(Math.floor(WIDTH * 0.8), Math.floor(window.innerHeight * 0.8));
+    let HEIGHT = Math.min(Math.floor(WIDTH * 0.7), Math.floor(window.innerHeight * 0.7));
     let socket = io();
 
     // Sign
@@ -153,14 +159,19 @@
     Img.map['field'].src = '/client/img/map.png';
     Img.map['forest'] = new Image();
     Img.map['forest'].src = '/client/img/map2.png';
+    Img.map['grassland'] = new Image();
+    Img.map['grassland'].src = '/client/img/map3.png';
 
     let ctx = document.getElementById("ctx").getContext("2d");
     let ctxUI = document.getElementById("ctx-ui").getContext("2d");
-    ctxUI.font = '30px Arial';
+    let uiDiv = document.getElementById("ui");
+    ctxUI.font = '200px Arial';
     ctx.canvas.width = WIDTH;
     ctx.canvas.height = HEIGHT;
     ctxUI.canvas.width = WIDTH;
     ctxUI.canvas.height = HEIGHT;
+    uiDiv.style.width = WIDTH;
+    uiDiv.style.height = HEIGHT;
 
     let Player = function(initPack) {
         let self = {};
@@ -299,6 +310,8 @@
         let player = Player.list[selfId];
         let x = WIDTH/2 - player.x;
         let y = HEIGHT/2 - player.y;
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
         ctx.drawImage(Img.map[player.map], x, y);
     }
 
@@ -360,7 +373,7 @@
     }
 
     document.ontouchstart = function(event) {
-        if(event.target.id === 'ui') {
+        if(event.target.id === 'ui' || event.target.id === 'ctx-ui') {
             // Attack when tapping on screen
             socket.emit('keyPress', { inputId: 'attack', state: true });
         }
@@ -375,11 +388,20 @@
     }
 
     document.onmousedown = function(event) {
-        socket.emit('keyPress', { inputId: 'attack', state: true });
+        if(event.target.id === 'ui' || event.target.id === 'ctx-ui')
+            socket.emit('keyPress', { inputId: 'attack', state: true });
+        else if(event.target.id === 'moveRight')
+            goRight();
+        else if(event.target.id === 'moveDown')
+            goDown();
+        else if(event.target.id === 'moveLeft')
+            goLeft();
+        else if(event.target.id === 'moveUp')
+            goUp();
     }
 
     document.ontouchend = function(event) {
-        if(event.target.id === 'ui')
+        if(event.target.id === 'ui' || event.target.id === 'ctx-ui')
             socket.emit('keyPress', { inputId: 'attack', state: false });
         else if(event.target.id === 'moveRight')
             stopRight();
@@ -392,7 +414,16 @@
     }
 
     document.onmouseup = function(event) {
-        socket.emit('keyPress', { inputId: 'attack', state: false });
+        if(event.target.id === 'ui' || event.target.id === 'ctx-ui')
+            socket.emit('keyPress', { inputId: 'attack', state: false });
+        else if(event.target.id === 'moveRight')
+            stopRight();
+        else if(event.target.id === 'moveDown')
+            stopDown();
+        else if(event.target.id === 'moveLeft')
+            stopLeft();
+        else if(event.target.id === 'moveUp')
+            stopUp();
     }
 
     document.onmousemove = function(event) {
@@ -404,7 +435,7 @@
 
     document.ontouchmove = function(event) {
 
-        if(event.target.id !== 'ui') return;
+        if(event.target.id !== 'ui' && event.target.id !== 'ctx-ui') return;
         let clientX = event.touches[0].clientX;
         let clientY = event.touches[0].clientY;
         //console.log(event);
@@ -416,11 +447,13 @@
 
     window.addEventListener('resize', event => {
         WIDTH = window.innerWidth;
-        HEIGHT = Math.min(Math.floor(WIDTH * 0.8), Math.floor(window.innerHeight * 0.8));
+        HEIGHT = Math.min(Math.floor(WIDTH * 0.7), Math.floor(window.innerHeight * 0.7));
         ctx.canvas.width = WIDTH;
         ctx.canvas.height = HEIGHT;
         ctxUI.canvas.width = WIDTH;
         ctxUI.canvas.height = HEIGHT;
+        uiDiv.style.width = WIDTH;
+        uiDiv.style.height = HEIGHT;
     })
 
     // Disable right click

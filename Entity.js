@@ -171,7 +171,9 @@ Player.onConnect = function(socket, username, progress) {
     socket.on('changeMap', (data) => {
         if(player.map === 'field')
             player.map = 'forest';
-        else
+        else if(player.map === 'forest')
+            player.map = 'grassland';
+        else if(player.map === 'grassland')
             player.map = 'field';
     });
 
