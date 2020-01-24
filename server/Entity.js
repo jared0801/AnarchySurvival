@@ -101,6 +101,7 @@ let Enemy = function(param) {
                 
                 if(p.hp <= 0) {
                     // Respawn target
+                    p.score = 0;
                     p.hp = p.hpMax;
                     p.x = Math.random() * 500;
                     p.y = Math.random() * 500;
@@ -187,6 +188,7 @@ let Player = function(param) {
     self.reloadTime = 3;
     self.reload = 0;
     self.inventory = new Inventory(param.progress.items, param.socket, true, self);
+    self.friends = {};
 
     self.inventory.addItem('potion', 1);
 
@@ -202,6 +204,12 @@ let Player = function(param) {
                 self.reload = self.reloadTime;
             }
         }
+    }
+    self.addFriend = function(friendId) {
+        self.friends[friendId] = 1;
+    }
+    self.removeFriend = function(friendId) {
+        self.friends[friendId] = 0;
     }
     self.shootBullet = function(angle) {
         if(Math.random() < 0.1)
@@ -236,6 +244,7 @@ let Player = function(param) {
             id: self.id,
             x: self.x,
             y: self.y,
+            friends: self.friends,
             username: self.username,
             hp: self.hp,
             hpMax: self.hpMax,
@@ -249,6 +258,7 @@ let Player = function(param) {
             id: self.id,
             x: self.x,
             y: self.y,
+            friends: self.friends,
             username: self.username,
             hp: self.hp,
             score: self.score,
@@ -302,15 +312,37 @@ Player.onConnect = function(socket, username, progress) {
     });
 
     socket.on('spawnMonster', (data) => {
-        console.log('spawned');
-        let randAreaX = Math.floor(Math.random() * 601 - 300)
-        let randAreaY = Math.floor(Math.random() * 601 - 300)
-        Enemy({
-            x: data.x + randAreaX,
-            y: data.y + randAreaY,
-            map: data.map
-        });
-    })
+        console.log("spawned " + data.number + " enemies");
+        for(let i = 0; i < data.number; i++) {
+            let randAreaX = Math.floor(Math.random() * 601 - 300)
+            let randAreaY = Math.floor(Math.random() * 601 - 300)
+            Enemy({
+                x: data.x + randAreaX,
+                y: data.y + randAreaY,
+                map: data.map
+            });
+        }
+    });
+
+    socket.on('addFriend', (data) => { // data: { friendId }
+        //Player.list[socket.id].addFriend(data.friendId);
+        Player.list[data.friendId].socket.emit("requestFriend", socket.id);
+        //Player.list[socket.id].socket.emit("addToChat", "Added " + Player.list[data.friendId].username + " as a friend.");
+
+    });
+    socket.on('confirmFriend', (data) => {
+        Player.list[socket.id].addFriend(data);
+        Player.list[data].addFriend(socket.id);
+        Player.list[socket.id].socket.emit('addToChat', Player.list[data].username + " was added as a friend!");
+        Player.list[data].socket.emit('addToChat', Player.list[socket.id].username + " was added as a friend!");
+    });
+
+    socket.on('removeFriend', (data) => { // data: { friendId }
+        Player.list[socket.id].removeFriend(data);
+        Player.list[data].removeFriend(socket.id);
+        Player.list[socket.id].socket.emit('addToChat', Player.list[data].username + " was removed as a friend!");
+        Player.list[data].socket.emit('addToChat', Player.list[socket.id].username + " was removed as a friend!");
+    });
 
     socket.on('sendMsgToServer', (data) => { // data: ''
         for(let i in Player.list) {
@@ -386,7 +418,7 @@ let Bullet = function(param) {
         // Check if hitting a player
         for(let i in Player.list) {
             var p = Player.list[i];
-            if(self.map === p.map && self.getDistance(p) < 32 && self.parent !== p.id) {
+            if(self.map === p.map && self.getDistance(p) < 32 && self.parent !== p.id && !Player.list[self.parent].friends[p.id]) {
                 p.hp -= 1;
                 
                 if(p.hp <= 0) {
@@ -394,7 +426,7 @@ let Bullet = function(param) {
                     let shooter = Player.list[self.parent];
                     // shooter may have disconnected
                     if(shooter) {
-                        shooter.score += 1;
+                        shooter.score += p.score;
                     }
 
                     // Respawn target

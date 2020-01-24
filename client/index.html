@@ -47,9 +47,8 @@
             </div>
 
             <div id="belowGame">
-                <div id="chat-text">
-                </div>
                 <div id="inventory"></div>
+                <div id="chat-text"></div>
                 <form id="chat-form">
                     <input id="chat-input" type="text" placeholder="Type here to chat...">
                 </form>
@@ -103,20 +102,47 @@
     let chatForm = document.getElementById("chat-form");
     
     socket.on('addToChat', (data) => {
-        chatText.innerHTML += '<div>' + data + '</div>';
-        chatText.scrollTop = chatText.scrollHeight;
+        consoleMsg(data);
     })
     socket.on('evalAnswer', (data) => {
         console.log(data);
     })
+    
+    socket.on('requestFriend', (data) => {
+        // <button onclick="changeMap()" style="position: absolute; bottom: 0px; right: 0px">
+        let friendReq = document.createElement('div');
+        friendReq.style.position = "absolute";
+        friendReq.style.top = 0;
+        friendReq.style.left = WIDTH/2 - friendReq.style.width + "px";
+        friendReq.style.backgroundColor = "lightgray";
+        friendReq.style.padding = "10px";
+        friendReq.innerHTML = "<p>" + Player.list[data].username + " would like to be your friend!</p>";
+        let acceptBtn = document.createElement('button');
+        acceptBtn.innerText = "Accept";
+        acceptBtn.onclick = function() {
+            socket.emit('confirmFriend', data);
+            friendReq.remove();
+        }
+        let denyBtn = document.createElement('button');
+        denyBtn.onclick = function() {
+            friendReq.remove();
+        }
+        denyBtn.innerText = "Deny";
+        friendReq.append(acceptBtn);
+        friendReq.append(denyBtn);
+        uiDiv.append(friendReq);
+        consoleMsg(Player.list[data].username + " would like to be your friend!");
+    });
 
     chatForm.onsubmit = function(e) {
         e.preventDefault(); // don't refresh the page
         if(chatInput.value[0] === '/')
             socket.emit('evalServer', chatInput.value.slice(1))
-        else if(chatInput.value[0] === '!')
-            socket.emit('spawnMonster', { x: Player.list[selfId].x, y: Player.list[selfId].y, map: Player.list[selfId].map });
-        else if(chatInput.value[0] === '@') {
+        else if(chatInput.value[0] === '!') {
+            let number = Number.parseInt(chatInput.value.slice(1));
+            if(Number.isNaN(number)) number = 1;
+            socket.emit('spawnMonster', { x: Player.list[selfId].x, y: Player.list[selfId].y, map: Player.list[selfId].map, number });
+        } else if(chatInput.value[0] === '@') {
             //@username message
             let firstSpace = chatInput.value.indexOf(' ');
             let username = chatInput.value.slice(1, firstSpace);
@@ -187,6 +213,8 @@
         self.hpMax = initPack.hpMax;
         self.score = initPack.score;
         self.map = initPack.map;
+        self.menu = null;
+        self.friends = new Set([]);
 
         self.draw = function() {
             // Only show players on the same map
@@ -213,7 +241,13 @@
         }
 
         self.addFriend = function(friendId) {
-            console.log("Adding " + Player.list[friendId].username + " as a friend.");
+            closeMenu();
+            
+            if(self.friends[friendId]) {
+                socket.emit("removeFriend", friendId);
+            } else {
+                socket.emit("addFriend", { friendId });
+            }
         }
 
         Player.list[self.id] = self;
@@ -311,6 +345,8 @@
                     p.map = pack.map;
                 if(p.username !== undefined)
                     p.username = pack.username;
+                if(p.friends !== undefined)
+                    p.friends = pack.friends;
             }
         }
         for(let i = 0; i < data.bullet.length; i++) {
@@ -368,6 +404,11 @@
         }
     }, 40);
 
+    let consoleMsg = function(msg) {
+        chatText.innerHTML += '<div>' + msg + '</div>';
+        chatText.scrollTop = chatText.scrollHeight;
+    }
+
     let drawMap = function() {
         let player = Player.list[selfId];
         let x = WIDTH/2 - player.x;
@@ -384,45 +425,43 @@
         ctxUI.clearRect(0, 0, WIDTH, HEIGHT);
         ctxUI.fillStyle = 'black';
         ctxUI.font = "20px Arial";
-        ctxUI.fillText(Player.list[selfId].score, 0, 20);
+        ctxUI.fillText(Player.list[selfId].score + " points", 10, 30);
     }
     let lastScore = null;
 
-    let goLeft = function() {
-        let menu = document.getElementById('playerMenu');
-        if(menu) {
-            menu.remove();
+    let closeMenu = function() {
+        if(selfId) {
+            let player = Player.list[selfId];
+            if(player.menu) {
+                player.menu.remove();
+                player.menu = null;
+            }
         }
+    }
+
+    let goLeft = function() {
+        closeMenu();
         socket.emit('keyPress', { inputId: 'left', state: true });
     }
     let stopLeft = function() {
         socket.emit('keyPress', { inputId: 'left', state: false });
     }
     let goRight = function() {
-        let menu = document.getElementById('playerMenu');
-        if(menu) {
-            menu.remove();
-        }
+        closeMenu();
         socket.emit('keyPress', { inputId: 'right', state: true });
     }
     let stopRight = function() {
         socket.emit('keyPress', { inputId: 'right', state: false });
     }
     let goUp = function() {
-        let menu = document.getElementById('playerMenu');
-        if(menu) {
-            menu.remove();
-        }
+        closeMenu();
         socket.emit('keyPress', { inputId: 'up', state: true });
     }
     let stopUp = function() {
         socket.emit('keyPress', { inputId: 'up', state: false });
     }
     let goDown = function() {
-        let menu = document.getElementById('playerMenu');
-        if(menu) {
-            menu.remove();
-        }
+        closeMenu();
         socket.emit('keyPress', { inputId: 'down', state: true });
     }
     let stopDown = function() {
@@ -475,6 +514,9 @@
     }
 
     document.onmousedown = function(event) {
+        if(event.target.parentElement.id !== "playerMenu") {
+            closeMenu();
+        }
         if(event.button === 0) {
             if(event.target.id === 'ui' || event.target.id === 'ctx-ui')
                 socket.emit('keyPress', { inputId: 'attack', state: true });
@@ -487,30 +529,32 @@
             else if(event.target.id === 'moveUp')
                 goUp();
         } else if(event.button === 2) {
-            let menu = document.getElementById('playerMenu');
-            if(menu) {
-                menu.remove();
-            } else {
-                const self = Player.list[selfId];
+            //let menu = document.getElementById('playerMenu');
+            const self = Player.list[selfId];
+            if(!self.menu) {
                 for(let i in Player.list) {
                     var p = Player.list[i];
 
                     const mouseX = event.clientX - WIDTH/2 + self.x;
                     const mouseY = event.clientY - HEIGHT/2 + self.y;
-                    if(!menu && p.id != selfId && p.map === Player.list[selfId].map && Math.abs(p.x - mouseX) < 32 && Math.abs(p.y - mouseY) < 32) {
-                        menu = document.createElement('div');
-                        menu.id = 'playerMenu';
-                        menu.style.position = 'absolute';
-                        menu.style.top = event.clientY + 'px';
-                        menu.style.left = event.clientX + 'px';
-                        menu.style.backgroundColor = 'white';
+                    if(!self.menu && p.id != selfId && p.map === Player.list[selfId].map && Math.abs(p.x - mouseX) < 32 && Math.abs(p.y - mouseY) < 32) {
+                        self.menu = document.createElement('div');
+                        self.menu.style.position = 'absolute';
+                        self.menu.id = 'playerMenu';
+                        self.menu.style.top = event.clientY + 'px';
+                        self.menu.style.left = event.clientX + 'px';
+                        self.menu.style.backgroundColor = 'white';
                         let button = document.createElement('button');
                         button.setAttribute('id', 'AddFriend');
-                        button.innerText = "Add as friend";
+                        if(self.friends[p.id]) {
+                            button.innerText = "Remove as friend";
+                        } else {
+                            button.innerText = "Add as friend";
+                        }
                         //button.onclick = self.addFriend(p.id);
                         button.addEventListener("click", self.addFriend.bind(null, p.id), false);
-                        menu.append(button);
-                        uiDiv.appendChild(menu);
+                        self.menu.append(button);
+                        uiDiv.appendChild(self.menu);
                     }
                 }
             }
