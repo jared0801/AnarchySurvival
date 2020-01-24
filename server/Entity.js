@@ -1,7 +1,10 @@
-let initPack = { player: [], bullet: [] };
-let removePack = { player: [], bullet: [] };
 
-Entity = function(param) {
+let Inventory = require('../client/js/Inventory');
+
+let initPack = { player: [], bullet: [], enemy: [] };
+let removePack = { player: [], bullet: [], enemy: [] };
+
+let Entity = function(param) {
     let self = {
         x: 250,
         y: 250,
@@ -32,29 +35,143 @@ Entity.getFrameUpdateData = function() {
     let pack = {
         initPack: {
             player: initPack.player,
-            bullet: initPack.bullet
+            bullet: initPack.bullet,
+            enemy: initPack.enemy
         },
         removePack: {
             player: removePack.player,
-            bullet: removePack.bullet
+            bullet: removePack.bullet,
+            enemy: removePack.enemy
         },
         updatePack: {
             player: Player.update(),
-            bullet: Bullet.update()
+            bullet: Bullet.update(),
+            enemy: Enemy.update()
         }
     }
     
     initPack.player = [];
     initPack.bullet = [];
+    initPack.enemy = [];
     removePack.player = [];
     removePack.bullet = [];
+    removePack.enemy = [];
 
     return pack;
 }
 
-Player = function(param) {
+
+let Enemy = function(param) {
     let self = Entity(param);
-    self.number = "" + Math.floor(10* Math.random());
+    self.id = Math.random();
+    self.maxSpd = 5;
+    self.hp = 10;
+    self.hpMax = 10;
+    self.toRemove = false;
+
+    let super_update = self.update;
+    self.update = function() {
+        if(Math.random() < 0.4) {
+            for(let i in Player.list) {
+                var p = Player.list[i];
+                if(self.map === p.map && self.getDistance(p) < 300) {
+                    if(p.x > self.x) self.spdX = self.maxSpd;
+                    else self.spdX = -self.maxSpd;
+
+                    if(p.y > self.y) self.spdY = self.maxSpd;
+                    else self.spdY = -self.maxSpd;
+                }
+            }
+        } else {
+            let xrand = Math.random();
+            if(xrand < 0.1) self.spdX = self.maxSpd;
+            else if(xrand < 0.2) self.spdX = -self.maxSpd;
+            else if(xrand < 0.25) self.spdX = 0;
+            
+            let yrand = Math.random();
+            if(yrand < 0.1) self.spdY = self.maxSpd;
+            else if(yrand < 0.2) self.spdY = -self.maxSpd;
+            else if(yrand < 0.25) self.spdY = 0;
+        }
+
+        for(let i in Player.list) {
+            var p = Player.list[i];
+            if(self.map === p.map && self.getDistance(p) < 32) {
+                p.hp -= 1;
+                
+                if(p.hp <= 0) {
+                    // Respawn target
+                    p.hp = p.hpMax;
+                    p.x = Math.random() * 500;
+                    p.y = Math.random() * 500;
+                }
+            }
+        }
+
+        
+
+        //self.spdX = Math.floor(Math.random()*11) - 5;
+        //self.spdY = Math.floor(Math.random()*11) - 5;
+        super_update();
+    }
+
+    self.getInitPack = function() {
+        return {
+            id: self.id,
+            x: self.x,
+            y: self.y,
+            hp: self.hp,
+            hpMax: self.hpMax,
+            map: self.map
+        };
+    }
+
+    self.getUpdatePack = function() {
+        return {
+            id: self.id,
+            x: self.x,
+            y: self.y,
+            hp: self.hp,
+            map: self.map
+        };
+    }
+
+    Enemy.list[self.id] = self;
+    initPack.enemy.push(self.getInitPack());
+    return self;
+}
+Enemy.list = {};
+
+// Updates all bullets in Bullet.list
+Enemy.update = function() {
+    
+    let pack = [];
+
+    for(let i in Enemy.list) {
+        let enemy = Enemy.list[i];
+        enemy.update();
+        if(enemy.toRemove) {
+            delete Enemy.list[i];
+            removePack.enemy.push(enemy.id);
+        } else {
+            pack.push(enemy.getUpdatePack());
+        }
+    }
+    return pack;
+}
+
+Enemy.getAllInitPack = function() {
+    let enemies = [];
+    for(let i in Enemy.list) {
+        enemies.push(Enemy.list[i].getInitPack());
+    }
+    return enemies;
+}
+
+
+let Player = function(param) {
+    let self = Entity(param);
+    //self.number = "" + Math.floor(10* Math.random());
     self.username = param.username;
     self.socket = param.socket;
     self.pressingRight = false;
@@ -67,17 +184,23 @@ Player = function(param) {
     self.hp = 10;
     self.hpMax = 10;
     self.score = 0;
-    self.inventory = new Inventory(param.progress.items, param.socket, true);
+    self.reloadTime = 3;
+    self.reload = 0;
+    self.inventory = new Inventory(param.progress.items, param.socket, true, self);
 
     self.inventory.addItem('potion', 1);
 
-    var super_update = self.update;
+    let super_update = self.update;
     self.update = function() {
         self.updateSpd();
         super_update();
 
+        if(self.reload > 0) this.reload--;
         if(self.pressingAttack) {
-            self.shootBullet(self.mouseAngle);
+            if(this.reload == 0) {
+                self.shootBullet(self.mouseAngle);
+                self.reload = self.reloadTime;
+            }
         }
     }
     self.shootBullet = function(angle) {
@@ -113,7 +236,7 @@ Player = function(param) {
             id: self.id,
             x: self.x,
             y: self.y,
-            number: self.number,
+            username: self.username,
             hp: self.hp,
             hpMax: self.hpMax,
             score: self.score,
@@ -126,6 +249,7 @@ Player = function(param) {
             id: self.id,
             x: self.x,
             y: self.y,
+            username: self.username,
             hp: self.hp,
             score: self.score,
             map: self.map
@@ -177,6 +301,17 @@ Player.onConnect = function(socket, username, progress) {
             player.map = 'field';
     });
 
+    socket.on('spawnMonster', (data) => {
+        console.log('spawned');
+        let randAreaX = Math.floor(Math.random() * 601 - 300)
+        let randAreaY = Math.floor(Math.random() * 601 - 300)
+        Enemy({
+            x: data.x + randAreaX,
+            y: data.y + randAreaY,
+            map: data.map
+        });
+    })
+
     socket.on('sendMsgToServer', (data) => { // data: ''
         for(let i in Player.list) {
             Player.list[i].socket.emit('addToChat', player.username + ': ' + data);
@@ -201,7 +336,8 @@ Player.onConnect = function(socket, username, progress) {
     socket.emit('init', {
         selfId: socket.id,
         player: Player.getAllInitPack(),
-        bullet: Bullet.getAllInitPack()
+        bullet: Bullet.getAllInitPack(),
+        enemy: Enemy.getAllInitPack()
     });
 }
 
@@ -214,13 +350,6 @@ Player.getAllInitPack = function() {
 }
 
 Player.onDisconnect = function(socket) {
-    let player = Player.list[socket.id];
-    if(!player) return;
-
-    Database.savePlayerProgress({
-        username: player.username,
-        items: player.inventory.items
-    });
     delete Player.list[socket.id];
     removePack.player.push(socket.id);
 }
@@ -237,7 +366,7 @@ Player.update = function() {
     return pack;
 }
 
-Bullet = function(param) {
+let Bullet = function(param) {
     let self = Entity(param);
     self.id = Math.random();
     self.angle = param.angle;
@@ -254,6 +383,7 @@ Bullet = function(param) {
         }
         super_update();
 
+        // Check if hitting a player
         for(let i in Player.list) {
             var p = Player.list[i];
             if(self.map === p.map && self.getDistance(p) < 32 && self.parent !== p.id) {
@@ -268,9 +398,34 @@ Bullet = function(param) {
                     }
 
                     // Respawn target
+                    p.score = 0;
                     p.hp = p.hpMax;
                     p.x = Math.random() * 500;
                     p.y = Math.random() * 500;
+                }
+                self.toRemove = true;
+            }
+        }
+
+        // Check if hitting an enemy
+        for(let i in Enemy.list) {
+            var e = Enemy.list[i];
+            if(self.map === e.map && self.getDistance(e) < 32 && self.parent !== e.id) {
+                e.hp -= 1;
+                
+                if(e.hp <= 0 && e.toRemove == false) {
+                    // Give point to shooter
+                    let shooter = Player.list[self.parent];
+                    // shooter may have disconnected
+                    if(shooter) {
+                        shooter.score += 1;
+                    }
+
+                    // Respawn target
+                    /*p.hp = p.hpMax;
+                    p.x = Math.random() * 500;
+                    p.y = Math.random() * 500;*/
+                    e.toRemove = true;
                 }
                 self.toRemove = true;
             }
@@ -324,4 +479,11 @@ Bullet.getAllInitPack = function() {
         bullets.push(Bullet.list[i].getInitPack());
     }
     return bullets;
+}
+
+module.exports = {
+    Player,
+    Enemy,
+    Bullet,
+    Entity
 }

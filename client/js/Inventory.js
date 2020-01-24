@@ -1,8 +1,9 @@
-Inventory = function(items, socket, server){
+let Inventory = function(items, socket, server, player){
     var self = {
         items, //{id:"itemId",amount:1}
 		socket,
-		server
+		server,
+		player
     }
     self.addItem = function(id,amount){
 		for(var i = 0 ; i < self.items.length; i++){
@@ -65,7 +66,7 @@ Inventory = function(items, socket, server){
 				return;
 			}
 			let item = Item.list[itemId];
-			item.event(Player.list[self.socket.id]);
+			item.event(self.player);
 		});
 	}
 
@@ -74,7 +75,7 @@ Inventory = function(items, socket, server){
 }
 
 
-Item = function(id,name,event){
+let Item = function(id,name,event){
 	var self = {
 		id:id,
 		name:name,
@@ -98,7 +99,6 @@ Item("superAttack","Super Attack",function(player){
 	player.inventory.removeItem("superAttack", 1);
 });
 
-
-
-
-
+if(typeof module !== 'undefined' && module.exports) {
+	module.exports = Inventory;
+}

@@ -6,7 +6,7 @@ let db = USE_DB ? mongojs(process.env.DB_PATH, ['account', 'progress']) : null;
 // account: { username: string, password: string }
 // progress: { username: string, items: [{id: string, amount: number }] }
 
-Database = {};
+let Database = {};
 Database.isValidPassword = (data, cb) => {
     if(!USE_DB) return cb(true);
     db.account.findOne({ username: data.username,
@@ -58,3 +58,5 @@ Database.savePlayerProgress = function(data, cb) {
     if(!USE_DB) return cb();
     db.progress.update({ username: data.username }, { $set: data }, { upsert: true }, cb);
 }
+
+module.exports = Database;

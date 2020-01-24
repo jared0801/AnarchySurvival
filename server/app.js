@@ -1,10 +1,13 @@
 let express = require('express');
+let path = require('path');
 
 require('dotenv').config();
 
-require('./Database');
-require('./Entity');
-require('./client/js/Inventory');
+let Playerlist = {};
+let Bulletlist = {};
+
+let Database = require('./Database');
+let { Player, Entity } = require('./Entity');
 
 let app = express();
 let serv = require('http').Server(app);
@@ -12,10 +15,10 @@ let serv = require('http').Server(app);
 
 // Express stuff
 app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/client/index.html');
+    res.sendFile(path.join(__dirname, './../client/index.html'));
 });
 
-app.use('/client', express.static(__dirname + '/client'));
+app.use('/client', express.static(__dirname + '/../client'));
 
 serv.listen(process.env.PORT || 2000);
 console.log("Server started");
@@ -60,6 +63,12 @@ io.sockets.on('connection', function(socket) {
 
     socket.on('disconnect', () => {
         delete SOCKET_LIST[socket.id];
+        let player = Player.list[socket.id];
+        if(!player) return;
+        Database.savePlayerProgress({
+            username: player.username,
+            items: player.inventory.items
+        });
         Player.onDisconnect(socket);
     });
 
