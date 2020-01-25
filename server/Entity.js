@@ -4,6 +4,12 @@ let Inventory = require('../client/js/Inventory');
 let initPack = { player: [], bullet: [], enemy: [] };
 let removePack = { player: [], bullet: [], enemy: [] };
 
+const mapSizes = {
+    'field': { width: 1920, height: 1440 },
+    'forest': { width: 640, height: 480 },
+    'grassland': { width: 2304, height: 1920 }
+}
+
 let Entity = function(param) {
     let self = {
         x: 250,
@@ -103,8 +109,8 @@ let Enemy = function(param) {
                     // Respawn target
                     p.score = 0;
                     p.hp = p.hpMax;
-                    p.x = Math.random() * 500;
-                    p.y = Math.random() * 500;
+                    p.x = Math.random() * mapSizes[p.map].width;
+                    p.y = Math.random() * mapSizes[p.map].height;
                 }
             }
         }
@@ -114,6 +120,10 @@ let Enemy = function(param) {
         //self.spdX = Math.floor(Math.random()*11) - 5;
         //self.spdY = Math.floor(Math.random()*11) - 5;
         super_update();
+    }
+
+    self.kill = function() {
+        self.toRemove = true;
     }
 
     self.getInitPack = function() {
@@ -188,13 +198,19 @@ let Player = function(param) {
     self.reloadTime = 3;
     self.reload = 0;
     self.inventory = new Inventory(param.progress.items, param.socket, true, self);
-    self.friends = {};
+    self.friends = param.progress.friends || {};
 
     self.inventory.addItem('potion', 1);
 
     let super_update = self.update;
     self.update = function() {
         self.updateSpd();
+        
+        if(self.spdX < 0 && self.x <= 0) self.spdX = 0;
+        if(self.spdY < 0 && self.y <= 0) self.spdY = 0;
+
+        if(self.spdX > 0 && self.x >= mapSizes[self.map].width) self.spdX = 0;
+        if(self.spdY > 0 && self.y >= mapSizes[self.map].height) self.spdY = 0;
         super_update();
 
         if(self.reload > 0) this.reload--;
@@ -206,10 +222,12 @@ let Player = function(param) {
         }
     }
     self.addFriend = function(friendId) {
-        self.friends[friendId] = 1;
+        let friendUsername = Player.list[friendId].username;
+        self.friends[friendUsername] = 1;
     }
     self.removeFriend = function(friendId) {
-        self.friends[friendId] = 0;
+        let friendUsername = Player.list[friendId].username;
+        self.friends[friendUsername] = 0;
     }
     self.shootBullet = function(angle) {
         if(Math.random() < 0.1)
@@ -309,6 +327,8 @@ Player.onConnect = function(socket, username, progress) {
             player.map = 'grassland';
         else if(player.map === 'grassland')
             player.map = 'field';
+        player.x = Math.random() * mapSizes[player.map].width;
+        player.y = Math.random() * mapSizes[player.map].height;
     });
 
     socket.on('spawnMonster', (data) => {
@@ -418,7 +438,7 @@ let Bullet = function(param) {
         // Check if hitting a player
         for(let i in Player.list) {
             var p = Player.list[i];
-            if(self.map === p.map && self.getDistance(p) < 32 && self.parent !== p.id && !Player.list[self.parent].friends[p.id]) {
+            if(self.map === p.map && self.getDistance(p) < 32 && self.parent !== p.id && !Player.list[self.parent].friends[p.username]) {
                 p.hp -= 1;
                 
                 if(p.hp <= 0) {
@@ -429,11 +449,13 @@ let Bullet = function(param) {
                         shooter.score += p.score;
                     }
 
+                    Player.list[self.parent].socket.emit('addScore', { x: p.x, y: p.y, points: p.score });
+
                     // Respawn target
                     p.score = 0;
                     p.hp = p.hpMax;
-                    p.x = Math.random() * 500;
-                    p.y = Math.random() * 500;
+                    p.x = Math.random() * mapSizes[p.map].width;
+                    p.y = Math.random() * mapSizes[p.map].height;
                 }
                 self.toRemove = true;
             }
@@ -455,8 +477,9 @@ let Bullet = function(param) {
 
                     // Respawn target
                     /*p.hp = p.hpMax;
-                    p.x = Math.random() * 500;
-                    p.y = Math.random() * 500;*/
+                    p.x = Math.random() * 640;
+                    p.y = Math.random() * 480;*/
+                    Player.list[self.parent].socket.emit('addScore', { x: e.x, y: e.y, points: 1 });
                     e.toRemove = true;
                 }
                 self.toRemove = true;

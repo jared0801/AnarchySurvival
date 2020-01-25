@@ -4,7 +4,7 @@ let mongojs = USE_DB ? require('mongojs') : null;
 let db = USE_DB ? mongojs(process.env.DB_PATH, ['account', 'progress']) : null;
 
 // account: { username: string, password: string }
-// progress: { username: string, items: [{id: string, amount: number }] }
+// progress: { username: string, items: [{id: string, amount: number }], friends: {} }
 
 let Database = {};
 Database.isValidPassword = (data, cb) => {
@@ -34,7 +34,7 @@ Database.addUser = (data, cb) => {
     if(!USE_DB) return cb();
     db.account.insert({ username: data.username,
                         password: data.password }, (err) => {
-        Database.savePlayerProgress({ username: data.username, items: []}, function() {
+        Database.savePlayerProgress({ username: data.username, items: [], friends: {}}, function() {
             cb();
         });
     });
@@ -42,14 +42,14 @@ Database.addUser = (data, cb) => {
 
 Database.getPlayerProgress = function(username, cb) {
     if(!USE_DB)
-        return cb({ items: [] });
+        return cb({ items: [], friends: {} });
     db.progress.findOne({ username: username }, function(err, res) {
         if(err)
             console.log(err);
         if(!res)
-            return cb({ items: [] })
+            return cb({ items: [], friends: {} })
         else
-            return cb({ items: res.items });
+            return cb({ items: res.items, friends: res.friends });
     });
 }
 

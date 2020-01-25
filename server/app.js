@@ -3,11 +3,8 @@ let path = require('path');
 
 require('dotenv').config();
 
-let Playerlist = {};
-let Bulletlist = {};
-
 let Database = require('./Database');
-let { Player, Entity } = require('./Entity');
+let { Player, Enemy, Entity } = require('./Entity');
 
 let app = express();
 let serv = require('http').Server(app);
@@ -67,7 +64,8 @@ io.sockets.on('connection', function(socket) {
         if(!player) return;
         Database.savePlayerProgress({
             username: player.username,
-            items: player.inventory.items
+            items: player.inventory.items,
+            friends: player.friends
         });
         Player.onDisconnect(socket);
     });
@@ -75,13 +73,19 @@ io.sockets.on('connection', function(socket) {
     socket.on('evalServer', (data) => {
         if(!DEBUG) return;
 
-        let res;
-        try{
-            res = eval(data);
-        } catch(e) {
-            res = e.message;
+        if(data === 'killAll') {
+            for(let i in Enemy.list) {
+                Enemy.list[i].kill();
+            }
+        } else {
+            let res;
+            try{
+                res = eval(data);
+            } catch(e) {
+                res = e.message;
+            }
+            socket.emit('evalAnswer', res);
         }
-        socket.emit('evalAnswer', res);
     });
 });
 

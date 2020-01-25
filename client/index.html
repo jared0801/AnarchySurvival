@@ -95,6 +95,18 @@
             alert('Sign up unsuccessful');
         }
     });
+    
+    socket.on('addScore', (data) => { //{ x, y, points }        
+        let scoreMsg = "+ " + data.points + " points";
+        let txtWidth = ctx.measureText(scoreMsg).width;
+
+        let x = data.x + WIDTH/2 - Player.list[selfId].x - txtWidth/2;
+        let y = data.y + HEIGHT/2 - Player.list[selfId].y;
+        ctxUI.fillText(scoreMsg, x, y);
+        setTimeout(() => {
+            ctxUI.clearRect(x, y - 20, txtWidth + 20, 30);
+        }, 1000);
+    })
 
     // Chat
     let chatText = document.getElementById("chat-text");
@@ -113,7 +125,6 @@
         let friendReq = document.createElement('div');
         friendReq.style.position = "absolute";
         friendReq.style.top = "10px";
-        consoleMsg(WIDTH/2);
         friendReq.style.left = WIDTH/2 - friendReq.style.width + "px";
         friendReq.style.backgroundColor = "lightgray";
         friendReq.style.padding = "10px";
@@ -188,11 +199,17 @@
 
     Img.map = {};
     Img.map['field'] = new Image();
-    Img.map['field'].src = '/client/img/map.png';
+    Img.map['field'].src = '/client/img/somemap1.png';
     Img.map['forest'] = new Image();
     Img.map['forest'].src = '/client/img/map2.png';
     Img.map['grassland'] = new Image();
     Img.map['grassland'].src = '/client/img/map3.png';
+
+    Img.colorMap = {};
+    Img.colorMap['field'] = '#2A9225';
+    Img.colorMap['forest'] = '#899925';
+    Img.colorMap['grassland'] = '#809D49';
+
 
     let ctx = document.getElementById("ctx").getContext("2d");
     let ctxUI = document.getElementById("ctx-ui").getContext("2d");
@@ -234,8 +251,11 @@
 
             ctx.drawImage(Img.player, 0, 0, Img.player.width, Img.player.height, x - width/2, y - height/2, width, height);
 
-            // player number:
-            //ctx.fillText(self.number, self.x, self.y);
+            // player username:
+            ctx.fillStyle = 'black';
+            ctx.font = "bold 15px Arial";
+            let txtWidth = ctx.measureText(self.username).width;
+            ctx.fillText(self.username, x - txtWidth/2, y+40);
 
             // score:
             //ctx.fillText(self.score, self.x, self.y-60);
@@ -244,7 +264,8 @@
         self.addFriend = function(friendId) {
             closeMenu();
             
-            if(self.friends[friendId]) {
+            let friendUsername = Player.list[friendId].username;
+            if(self.friends[friendUsername]) {
                 socket.emit("removeFriend", friendId);
             } else {
                 socket.emit("addFriend", { friendId });
@@ -414,7 +435,7 @@
         let player = Player.list[selfId];
         let x = WIDTH/2 - player.x;
         let y = HEIGHT/2 - player.y;
-        ctx.fillStyle = "white";
+        ctx.fillStyle = Img.colorMap[player.map];
         ctx.fillRect(0, 0, WIDTH, HEIGHT);
         ctx.drawImage(Img.map[player.map], x, y);
     }
@@ -423,10 +444,11 @@
         if(lastScore === Player.list[selfId].score) return;
 
         lastScore = Player.list[selfId].score;
-        ctxUI.clearRect(0, 0, WIDTH, HEIGHT);
+        let scoreText = Player.list[selfId].score + " points";
         ctxUI.fillStyle = 'black';
         ctxUI.font = "20px Arial";
-        ctxUI.fillText(Player.list[selfId].score + " points", 10, 30);
+        ctxUI.clearRect(0, 0, 100, 50);
+        ctxUI.fillText(scoreText, 10, 30);
     }
     let lastScore = null;
 
@@ -532,7 +554,7 @@
         } else if(event.button === 2) {
             //let menu = document.getElementById('playerMenu');
             const self = Player.list[selfId];
-            if(!self.menu) {
+            if(self && !self.menu) {
                 for(let i in Player.list) {
                     var p = Player.list[i];
 
@@ -547,7 +569,7 @@
                         self.menu.style.backgroundColor = 'white';
                         let button = document.createElement('button');
                         button.setAttribute('id', 'AddFriend');
-                        if(self.friends[p.id]) {
+                        if(self.friends[p.username]) {
                             button.innerText = "Remove as friend";
                         } else {
                             button.innerText = "Add as friend";
