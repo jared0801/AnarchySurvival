@@ -1,305 +1,247 @@
 
-let Inventory = require('../client/js/Inventory');
+let Inventory = require('../client/js/Inventory.js');
+let Maps = require('./Maps.js');
 
-let initPack = { player: [], bullet: [], enemy: [] };
+let initPack = { player: [], bullet: [], enemy: [], portal: [] };
 let removePack = { player: [], bullet: [], enemy: [] };
 
-const mapSizes = {
-    'field': { width: 1920, height: 1440 },
-    'forest': { width: 640, height: 480 },
-    'grassland': { width: 2304, height: 1920 }
-}
-
-let Entity = function(param) {
-    let self = {
-        x: 250,
-        y: 250,
-        spdX: 0,
-        spdY: 0,
-        id: "",
-        map: "forest"
-    }
-    if(param) {
-        if(param.x) self.x = param.x;
-        if(param.y) self.y = param.y;
-        if(param.map) self.map = param.map;
-        if(param.id) self.id = param.id;
-    }
-    self.update = function() {
-        self.updatePosition();
-    }
-    self.updatePosition = function() {
-        self.x += self.spdX;
-        self.y += self.spdY;
-    }
-    self.getDistance = function(pt) {
-        return Math.sqrt(Math.pow(self.x - pt.x, 2) + Math.pow(self.y - pt.y, 2));
-    }
-    return self
-}
-Entity.getFrameUpdateData = function() {
-    let pack = {
-        initPack: {
-            player: initPack.player,
-            bullet: initPack.bullet,
-            enemy: initPack.enemy
-        },
-        removePack: {
-            player: removePack.player,
-            bullet: removePack.bullet,
-            enemy: removePack.enemy
-        },
-        updatePack: {
-            player: Player.update(),
-            bullet: Bullet.update(),
-            enemy: Enemy.update()
+class Entity {
+    constructor(param) {
+        this.x = 250,
+        this.y = 250,
+        this.spdX = 0,
+        this.spdY = 0,
+        this.id = "",
+        this.mapName = "forest"
+        if(param) {
+            if(param.x) this.x = param.x;
+            if(param.y) this.y = param.y;
+            if(param.mapName) this.mapName = param.mapName;
+            if(param.id) this.id = param.id;
         }
+        this.map = Maps.list[this.mapName];
     }
-    
-    initPack.player = [];
-    initPack.bullet = [];
-    initPack.enemy = [];
-    removePack.player = [];
-    removePack.bullet = [];
-    removePack.enemy = [];
+    update() {
+        this.updatePosition();
+    }
+    updatePosition() {
+        this.x += this.spdX;
+        this.y += this.spdY;
+    }
+    getDistance(pt) {
+        return Math.sqrt(Math.pow(this.x - pt.x, 2) + Math.pow(this.y - pt.y, 2));
+    }
 
-    return pack;
-}
-
-
-let Enemy = function(param) {
-    let self = Entity(param);
-    self.id = Math.random();
-    self.maxSpd = 5;
-    self.hp = 10;
-    self.hpMax = 10;
-    self.toRemove = false;
-
-    let super_update = self.update;
-    self.update = function() {
-        if(Math.random() < 0.4) {
-            for(let i in Player.list) {
-                var p = Player.list[i];
-                if(self.map === p.map && self.getDistance(p) < 300) {
-                    if(p.x > self.x) self.spdX = self.maxSpd;
-                    else self.spdX = -self.maxSpd;
-
-                    if(p.y > self.y) self.spdY = self.maxSpd;
-                    else self.spdY = -self.maxSpd;
-                }
-            }
-        } else {
-            let xrand = Math.random();
-            if(xrand < 0.1) self.spdX = self.maxSpd;
-            else if(xrand < 0.2) self.spdX = -self.maxSpd;
-            else if(xrand < 0.25) self.spdX = 0;
-            
-            let yrand = Math.random();
-            if(yrand < 0.1) self.spdY = self.maxSpd;
-            else if(yrand < 0.2) self.spdY = -self.maxSpd;
-            else if(yrand < 0.25) self.spdY = 0;
-        }
-
-        for(let i in Player.list) {
-            var p = Player.list[i];
-            if(self.map === p.map && self.getDistance(p) < 32) {
-                p.hp -= 1;
-                
-                if(p.hp <= 0) {
-                    // Respawn target
-                    p.score = 0;
-                    p.hp = p.hpMax;
-                    p.x = Math.random() * mapSizes[p.map].width;
-                    p.y = Math.random() * mapSizes[p.map].height;
-                }
+    static getFrameUpdateData() {
+        let pack = {
+            initPack: {
+                player: initPack.player,
+                bullet: initPack.bullet,
+                enemy: initPack.enemy,
+                portal: initPack.portal
+            },
+            removePack: {
+                player: removePack.player,
+                bullet: removePack.bullet,
+                enemy: removePack.enemy
+            },
+            updatePack: {
+                player: Player.update(),
+                bullet: Bullet.update(),
+                enemy: Enemy.update(),
+                portal: Portal.update()
             }
         }
-
         
-
-        //self.spdX = Math.floor(Math.random()*11) - 5;
-        //self.spdY = Math.floor(Math.random()*11) - 5;
-        super_update();
-    }
-
-    self.kill = function() {
-        self.toRemove = true;
-    }
-
-    self.getInitPack = function() {
-        return {
-            id: self.id,
-            x: self.x,
-            y: self.y,
-            hp: self.hp,
-            hpMax: self.hpMax,
-            map: self.map
-        };
-    }
-
-    self.getUpdatePack = function() {
-        return {
-            id: self.id,
-            x: self.x,
-            y: self.y,
-            hp: self.hp,
-            map: self.map
-        };
-    }
-
-    Enemy.list[self.id] = self;
-    initPack.enemy.push(self.getInitPack());
-    return self;
-}
-Enemy.list = {};
-
-// Updates all bullets in Bullet.list
-Enemy.update = function() {
+        initPack.player = [];
+        initPack.bullet = [];
+        initPack.enemy = [];
+        initPack.portal = [];
+        removePack.player = [];
+        removePack.bullet = [];
+        removePack.enemy = [];
     
-    let pack = [];
+        return pack;
+    }
+}
 
-    for(let i in Enemy.list) {
-        let enemy = Enemy.list[i];
-        enemy.update();
-        if(enemy.toRemove) {
-            delete Enemy.list[i];
-            removePack.enemy.push(enemy.id);
-        } else {
-            pack.push(enemy.getUpdatePack());
+
+class Player extends Entity {
+    static list = {};
+    constructor(param) {
+        super(param);
+        this.username = param.username;
+        this.socket = param.socket;
+        this.pressingRight = false;
+        this.pressingLeft = false;
+        this.pressingUp = false;
+        this.pressingDown = false;
+        this.pressingAttack = false;
+        this.mouseAngle = 0;
+        this.maxSpd = 10;
+        this.hp = 10;
+        this.hpMax = 10;
+        this.score = 0;
+        this.reloadTime = 3;
+        this.reload = 0;
+        this.direction = 0; // 0 - forwards/down, 1 - left, 2 backwards/up, 3 - right
+        this.isMoving = false;
+        this.inventory = new Inventory(param.progress.items, param.socket, true, this);
+        this.friends = param.progress.friends || {};
+        this.gender = 0; // 0 - boy, 1 - girl
+        if(param.progress.gender) {
+            this.gender = param.progress.gender;
         }
+        if(param.progress.x) {
+            this.x = param.progress.x;
+        }
+        if(param.progress.y) {
+            this.y = param.progress.y;
+        }
+        if(param.progress.mapName) {
+            this.mapName = param.progress.mapName;
+            this.map = Maps.list[this.mapName];
+        } else {
+            this.mapName = 'forest';
+            this.map = Maps.list[this.mapName];
+        }
+        if(param.progress.score) {
+            this.score = param.progress.score;
+        }
+        this.inventory.addItem('potion', 1);
+
+        Player.list[this.id] = this;
+        initPack.player.push(this.getInitPack());
     }
-    return pack;
-}
-
-Enemy.getAllInitPack = function() {
-    let enemies = [];
-    for(let i in Enemy.list) {
-        enemies.push(Enemy.list[i].getInitPack());
-    }
-    return enemies;
-}
 
 
-let Player = function(param) {
-    let self = Entity(param);
-    //self.number = "" + Math.floor(10* Math.random());
-    self.username = param.username;
-    self.socket = param.socket;
-    self.pressingRight = false;
-    self.pressingLeft = false;
-    self.pressingUp = false;
-    self.pressingDown = false;
-    self.pressingAttack = false;
-    self.mouseAngle = 0;
-    self.maxSpd = 10;
-    self.hp = 10;
-    self.hpMax = 10;
-    self.score = 0;
-    self.reloadTime = 3;
-    self.reload = 0;
-    self.inventory = new Inventory(param.progress.items, param.socket, true, self);
-    self.friends = param.progress.friends || {};
-
-    self.inventory.addItem('potion', 1);
-
-    let super_update = self.update;
-    self.update = function() {
-        self.updateSpd();
+    update() {
+        this.updateSpd();
         
-        if(self.spdX < 0 && self.x <= 0) self.spdX = 0;
-        if(self.spdY < 0 && self.y <= 0) self.spdY = 0;
+        if(this.spdX < 0 && this.x <= 0) this.spdX = 0;
+        if(this.spdY < 0 && this.y <= 0) this.spdY = 0;
 
-        if(self.spdX > 0 && self.x >= mapSizes[self.map].width) self.spdX = 0;
-        if(self.spdY > 0 && self.y >= mapSizes[self.map].height) self.spdY = 0;
-        super_update();
+        if(this.spdX > 0 && this.x >= Maps.list[this.mapName].width) this.spdX = 0;
+        if(this.spdY > 0 && this.y >= Maps.list[this.mapName].height) this.spdY = 0;
 
-        if(self.reload > 0) this.reload--;
-        if(self.pressingAttack) {
+        if(this.spdX != 0 || this.spdY != 0) this.isMoving = true;
+        else this.isMoving = false;
+        super.update();
+
+        if(this.reload > 0) this.reload--;
+        if(this.pressingAttack) {
             if(this.reload == 0) {
-                self.shootBullet(self.mouseAngle);
-                self.reload = self.reloadTime;
+                this.shootBullet(this.mouseAngle);
+                this.reload = this.reloadTime;
             }
         }
     }
-    self.addFriend = function(friendId) {
+    addFriend = function(friendId) {
         let friendUsername = Player.list[friendId].username;
-        self.friends[friendUsername] = 1;
+        this.friends[friendUsername] = 1;
     }
-    self.removeFriend = function(friendId) {
+    removeFriend = function(friendId) {
         let friendUsername = Player.list[friendId].username;
-        self.friends[friendUsername] = 0;
+        this.friends[friendUsername] = 0;
     }
-    self.shootBullet = function(angle) {
+    shootBullet = function(angle) {
         if(Math.random() < 0.1)
-            self.inventory.addItem('potion', 1);
-        Bullet({
-            parent: self.id,
+            this.inventory.addItem('potion', 1);
+        new Bullet({
+            parent: this.id,
             angle,
-            x: self.x,
-            y: self.y,
-            map: self.map
+            x: this.x,
+            y: this.y,
+            mapName: this.mapName
         });
     }
 
     // Overwrites entitys updatePosition
-    self.updateSpd = function() {
-        if(self.pressingRight)
-            self.spdX = self.maxSpd;
-        else if(self.pressingLeft)
-            self.spdX = -self.maxSpd;
+    updateSpd = function() {
+        if(this.pressingRight)
+            this.spdX = this.maxSpd;
+        else if(this.pressingLeft)
+            this.spdX = -this.maxSpd;
         else
-            self.spdX = 0;
-        if(self.pressingDown)
-            self.spdY = self.maxSpd;
-        else if(self.pressingUp)
-            self.spdY = -self.maxSpd;
+            this.spdX = 0;
+        if(this.pressingDown)
+            this.spdY = this.maxSpd;
+        else if(this.pressingUp)
+            this.spdY = -this.maxSpd;
         else
-            self.spdY = 0;
+            this.spdY = 0;
+
+        if(this.spdY > 0 && this.spdY >= this.spdX) this.direction = 0;
+        else if(this.spdY < 0 && this.spdY <= this.spdX) this.direction = 2;
+
+        if(this.spdX > 0 && this.spdX >= this.spdY) this.direction = 3;
+        else if(this.spdX < 0 && this.spdX <= this.spdY) this.direction = 1;
     }
 
-    self.getInitPack = function() {
+    getInitPack = function() {
         return {
-            id: self.id,
-            x: self.x,
-            y: self.y,
-            friends: self.friends,
-            username: self.username,
-            hp: self.hp,
-            hpMax: self.hpMax,
-            score: self.score,
-            map: self.map
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            friends: this.friends,
+            username: this.username,
+            hp: this.hp,
+            hpMax: this.hpMax,
+            score: this.score,
+            mapName: this.mapName,
+            gender: this.gender
         };
     }
 
-    self.getUpdatePack = function() {
+    getUpdatePack = function() {
         return {
-            id: self.id,
-            x: self.x,
-            y: self.y,
-            friends: self.friends,
-            username: self.username,
-            hp: self.hp,
-            score: self.score,
-            map: self.map
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            friends: this.friends,
+            username: this.username,
+            hp: this.hp,
+            score: this.score,
+            mapName: this.mapName,
+            direction: this.direction,
+            isMoving: this.isMoving,
+            gender: this.gender
         };
     }
 
-    Player.list[self.id] = self;
-    initPack.player.push(self.getInitPack());
-    return self;
+    sendInitPack = function() {
+        this.socket.emit('init', {
+            selfId: this.socket.id,
+            player: Player.getAllInitPack(),
+            bullet: Bullet.getAllInitPack(),
+            enemy: Enemy.getAllInitPack(),
+            portal: Portal.getAllInitPack()
+        });
+    }
+
+    changeMap() {
+        if(this.mapName === 'field') {
+            this.mapName = 'forest';
+            this.map = Maps.list[this.mapName];
+        } else if(this.mapName === 'forest') {
+            this.mapName = 'field';
+            this.map = Maps.list[this.mapName];
+        }/* else if(this.mapName === 'grassland') {
+            this.mapName = 'field';
+            this.map = Maps.list[this.mapName];
+        }*/
+        this.x = Math.random() * Maps.list[this.mapName].width;
+        this.y = Math.random() * Maps.list[this.mapName].height;
+    }
 }
-Player.list = {};
 
-Player.onConnect = function(socket, username, progress) {
-    let map = 'forest';
-    if(Math.random() < 0.5) map = 'field';
-
-    let player = Player({
+Player.onConnect = function(socket, username, progress, account) {
+    let player = new Player({
         username,
         id: socket.id,
-        map,
         socket,
-        progress
+        progress,
+        account
     });
 
     // Check if player has items
@@ -321,27 +263,11 @@ Player.onConnect = function(socket, username, progress) {
     });
 
     socket.on('changeMap', (data) => {
-        if(player.map === 'field')
-            player.map = 'forest';
-        else if(player.map === 'forest')
-            player.map = 'grassland';
-        else if(player.map === 'grassland')
-            player.map = 'field';
-        player.x = Math.random() * mapSizes[player.map].width;
-        player.y = Math.random() * mapSizes[player.map].height;
+        player.changeMap();
     });
 
     socket.on('spawnMonster', (data) => {
-        console.log("spawned " + data.number + " enemies");
-        for(let i = 0; i < data.number; i++) {
-            let randAreaX = Math.floor(Math.random() * 601 - 300)
-            let randAreaY = Math.floor(Math.random() * 601 - 300)
-            Enemy({
-                x: data.x + randAreaX,
-                y: data.y + randAreaY,
-                map: data.map
-            });
-        }
+        Enemy.spawnEnemies(data.number, data.mapName);
     });
 
     socket.on('addFriend', (data) => { // data: { friendId }
@@ -384,13 +310,10 @@ Player.onConnect = function(socket, username, progress) {
             socket.emit('addToChat', 'To ' + data.username + ': ' + data.message)
         }
     });
-
-    socket.emit('init', {
-        selfId: socket.id,
-        player: Player.getAllInitPack(),
-        bullet: Bullet.getAllInitPack(),
-        enemy: Enemy.getAllInitPack()
-    });
+    
+    for(let i in Player.list) {
+        Player.list[i].sendInitPack();
+    }
 }
 
 Player.getAllInitPack = function() {
@@ -418,97 +341,258 @@ Player.update = function() {
     return pack;
 }
 
-let Bullet = function(param) {
-    let self = Entity(param);
-    self.id = Math.random();
-    self.angle = param.angle;
-    self.spdX = Math.cos(self.angle/180*Math.PI) * 10;
-    self.spdY = Math.sin(self.angle/180*Math.PI) * 10;
-    self.parent = param.parent;
-    self.timer = 0;
-    self.toRemove = false;
 
-    let super_update = self.update;
-    self.update = function() {
-        if(self.timer++ > 100) {
-            self.toRemove = true;
+
+class Enemy extends Entity {
+    static list = {};
+    static count = 0;
+    constructor(param) {
+        super(param);
+        this.id = Math.random();
+        this.maxSpd = 5;
+        this.hp = 10;
+        this.hpMax = 10;
+        this.toRemove = false;
+        this.type = 0; // 0 - bat, 1 - gladiator
+        this.isMoving = false;
+        this.direction = 0; // 0 - forwards/down, 1 - left, 2 backwards/up, 3 - right
+
+        if(Math.random() < 0.5) { // 50% chance of being a bat or a gladiator
+            this.type = 1;
         }
-        super_update();
+
+        Enemy.count++;
+        Enemy.list[this.id] = this;
+        initPack.enemy.push(this.getInitPack());
+    }
+
+    update() {
+        if(Math.random() < 0.4) {
+            // Look for a player to follow
+            for(let i in Player.list) {
+                var p = Player.list[i];
+                if(this.mapName === p.mapName && this.getDistance(p) < 300) {
+                    if(p.x > this.x) this.spdX = this.maxSpd;
+                    else this.spdX = -this.maxSpd;
+
+                    if(p.y > this.y) this.spdY = this.maxSpd;
+                    else this.spdY = -this.maxSpd;
+                }
+            }
+        } else {
+            // Move randomly
+            let xrand = Math.random();
+            if(xrand < 0.1) this.spdX = this.maxSpd;
+            else if(xrand < 0.2) this.spdX = -this.maxSpd;
+            else if(xrand < 0.25) this.spdX = 0;
+            
+            let yrand = Math.random();
+            if(yrand < 0.1) this.spdY = this.maxSpd;
+            else if(yrand < 0.2) this.spdY = -this.maxSpd;
+            else if(yrand < 0.25) this.spdY = 0;
+        }
+
+        // Stop at map boundaries
+        if(this.spdX < 0 && this.x <= 0) this.spdX = 0;
+        if(this.spdY < 0 && this.y <= 0) this.spdY = 0;
+        if(this.spdX > 0 && this.x >= Maps.list[this.mapName].width) this.spdX = 0;
+        if(this.spdY > 0 && this.y >= Maps.list[this.mapName].height) this.spdY = 0;
+
+        for(let i in Player.list) {
+            var p = Player.list[i];
+            if(this.mapName === p.mapName && this.getDistance(p) < 32) {
+                p.hp -= 1;
+                
+                if(p.hp <= 0) {
+                    // Respawn target
+                    p.socket.emit('addToChat', "You died and lost " + p.score + " points.");
+                    p.score = 0;
+                    p.hp = p.hpMax;
+                    p.x = Math.random() * Maps.list[p.mapName].width;
+                    p.y = Math.random() * Maps.list[p.mapName].height;
+                }
+            }
+        }
+
+        if(this.spdX != 0 || this.spdY != 0) this.isMoving = true;
+        else this.isMoving = false;
+
+        
+        if(this.spdY > 0 && this.spdY >= this.spdX) this.direction = 0;
+        else if(this.spdY < 0 && this.spdY <= this.spdX) this.direction = 2;
+
+        if(this.spdX > 0 && this.spdX >= this.spdY) this.direction = 3;
+        else if(this.spdX < 0 && this.spdX <= this.spdY) this.direction = 1;
+        
+        super.update();
+    }
+
+    kill() {
+        this.toRemove = true;
+    }
+
+    getInitPack() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            hp: this.hp,
+            hpMax: this.hpMax,
+            mapName: this.mapName,
+            type: this.type
+        };
+    }
+
+    getUpdatePack() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            hp: this.hp,
+            hpMax: this.hpMax,
+            mapName: this.mapName,
+            type: this.type,
+            isMoving: this.isMoving,
+            direction: this.direction
+        };
+    }
+}
+
+Enemy.spawnEnemies = function(number, mapName) {
+    console.log("spawned " + number + " enemies");
+    for(let i = 0; i < number; i++) {
+        let randAreaX = Math.floor(Math.random() * Maps.list[mapName].width)
+        let randAreaY = Math.floor(Math.random() * Maps.list[mapName].height)
+        new Enemy({
+            x: randAreaX,
+            y: randAreaY,
+            mapName: mapName
+        });
+    }
+}
+
+// Updates all enemies in Enemy.list
+Enemy.update = function() {
+    
+    let pack = [];
+
+    // Call update function for all enemies
+    for(let i in Enemy.list) {
+        let enemy = Enemy.list[i];
+        enemy.update();
+        if(enemy.toRemove) {
+            Enemy.count--;
+            delete Enemy.list[i];
+            removePack.enemy.push(enemy.id);
+        } else {
+            pack.push(enemy.getUpdatePack());
+        }
+    }
+    return pack;
+}
+
+Enemy.getAllInitPack = function() {
+    let enemies = [];
+    for(let i in Enemy.list) {
+        enemies.push(Enemy.list[i].getInitPack());
+    }
+    return enemies;
+}
+
+
+class Bullet extends Entity{
+    static list = {};
+    constructor(param) {
+        super(param);
+        this.id = Math.random();
+        this.angle = param.angle;
+        this.spdX = Math.cos(this.angle/180*Math.PI) * 20;
+        this.spdY = Math.sin(this.angle/180*Math.PI) * 20;
+        this.parent = param.parent;
+        this.timer = 0;
+        this.toRemove = false;
+
+        Bullet.list[this.id] = this;
+        initPack.bullet.push(this.getInitPack());
+    }
+
+    update() {
+        if(this.timer++ > 100) {
+            this.toRemove = true;
+        }
+        super.update();
 
         // Check if hitting a player
         for(let i in Player.list) {
             var p = Player.list[i];
-            if(self.map === p.map && self.getDistance(p) < 32 && self.parent !== p.id && !Player.list[self.parent].friends[p.username]) {
+            if(this.mapName === p.mapName && this.getDistance(p) < 32 && this.parent !== p.id && !Player.list[this.parent].friends[p.username]) {
                 p.hp -= 1;
                 
                 if(p.hp <= 0) {
                     // Give point to shooter
-                    let shooter = Player.list[self.parent];
+                    let shooter = Player.list[this.parent];
                     // shooter may have disconnected
                     if(shooter) {
                         shooter.score += p.score;
                     }
 
-                    Player.list[self.parent].socket.emit('addScore', { x: p.x, y: p.y, points: p.score });
+                    Player.list[this.parent].socket.emit('addScore', { x: p.x, y: p.y, points: p.score });
 
                     // Respawn target
+                    p.socket.emit('addToChat', "You died and lost " + p.score + " points.");
                     p.score = 0;
                     p.hp = p.hpMax;
-                    p.x = Math.random() * mapSizes[p.map].width;
-                    p.y = Math.random() * mapSizes[p.map].height;
+                    p.x = Math.random() * Maps.list[p.mapName].width;
+                    p.y = Math.random() * Maps.list[p.mapName].height;
                 }
-                self.toRemove = true;
+                this.toRemove = true;
             }
         }
 
         // Check if hitting an enemy
         for(let i in Enemy.list) {
             var e = Enemy.list[i];
-            if(self.map === e.map && self.getDistance(e) < 32 && self.parent !== e.id) {
+            if(this.mapName === e.mapName && this.getDistance(e) < 32 && this.parent !== e.id) {
                 e.hp -= 1;
                 
                 if(e.hp <= 0 && e.toRemove == false) {
                     // Give point to shooter
-                    let shooter = Player.list[self.parent];
+                    let shooter = Player.list[this.parent];
                     // shooter may have disconnected
                     if(shooter) {
                         shooter.score += 1;
+                        shooter.socket.emit('addScore', { x: e.x, y: e.y, points: 1 });
                     }
 
                     // Respawn target
                     /*p.hp = p.hpMax;
                     p.x = Math.random() * 640;
                     p.y = Math.random() * 480;*/
-                    Player.list[self.parent].socket.emit('addScore', { x: e.x, y: e.y, points: 1 });
                     e.toRemove = true;
                 }
-                self.toRemove = true;
+                this.toRemove = true;
             }
         }
     }
     
-    self.getInitPack = function() {
+    getInitPack() {
         return {
-            id: self.id,
-            x: self.x,
-            y: self.y,
-            map: self.map
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            mapName: this.mapName
         };
     }
     
-    self.getUpdatePack = function() {
+    getUpdatePack() {
         return {
-            id: self.id,
-            x: self.x,
-            y: self.y
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            mapName: this.mapName
         };
     }
-
-    Bullet.list[self.id] = self;
-    initPack.bullet.push(self.getInitPack());
-    return self;
 }
-Bullet.list = {};
 
 // Updates all bullets in Bullet.list
 Bullet.update = function() {
@@ -536,9 +620,84 @@ Bullet.getAllInitPack = function() {
     return bullets;
 }
 
+
+class Portal extends Entity{
+    static list = {};
+    constructor(param) {
+        super(param);
+        this.id = Math.random();
+
+        Portal.list[this.id] = this;
+        initPack.portal.push(this.getInitPack());
+    }
+
+    update() {
+        super.update();
+
+        // Check if hitting a player
+        for(let i in Player.list) {
+            var p = Player.list[i];
+            if(this.mapName === p.mapName && this.getDistance(p) < 32) {
+                // Change map
+                p.changeMap();
+                console.log('changing map');
+                
+            }
+        }
+
+        // Check if hitting an enemy
+        /*for(let i in Enemy.list) {
+            var e = Enemy.list[i];
+            if(this.mapName === e.mapName && this.getDistance(e) < 32) {
+                
+            }
+        }*/
+    }
+    
+    getInitPack() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            mapName: this.mapName
+        };
+    }
+    
+    getUpdatePack() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            mapName: this.mapName
+        };
+    }
+}
+
+// Updates all portals in Portal.list
+Portal.update = function() {
+    
+    let pack = [];
+
+    for(let i in Portal.list) {
+        let portal = Portal.list[i];
+        portal.update();
+        pack.push(portal.getUpdatePack());
+    }
+    return pack;
+}
+
+Portal.getAllInitPack = function() {
+    let portals = [];
+    for(let i in Portal.list) {
+        portals.push(Portal.list[i].getInitPack());
+    }
+    return portals;
+}
+
 module.exports = {
     Player,
     Enemy,
     Bullet,
+    Portal,
     Entity
 }

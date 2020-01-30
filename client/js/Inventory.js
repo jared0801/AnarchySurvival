@@ -51,7 +51,8 @@ let Inventory = function(items, socket, server, player){
 			button.onclick = function() {
 				self.socket.emit('useItem', item.id);
 			}
-			button.innerText = item.name + " x" + data.amount;
+			button.className = "gameBtn";
+			button.innerText = item.name + " x" + data.amount + " (" + item.key + ")";
 			inventory.appendChild(button);
 		}
 		for(var i = 0 ; i < self.items.length; i++){
@@ -75,24 +76,25 @@ let Inventory = function(items, socket, server, player){
 }
 
 
-let Item = function(id,name,event){
+let Item = function(id,name,key,event){
 	var self = {
-		id:id,
-		name:name,
-		event:event,
+		id,
+		name,
+		event,
+		key
 	}
 	Item.list[self.id] = self;
 	return self;
 }
 Item.list = {};
 
-Item("potion","Potion",function(player){
+Item("potion","Potion","z", function(player){
 	player.hp = 10;
 	player.inventory.removeItem("potion", 1);
 	player.inventory.addItem("superAttack", 1);
 });
 
-Item("superAttack","Super Attack",function(player){
+Item("superAttack","Super Attack", "x", function(player){
 	for(let i = 0; i < 360; i++) {
 		player.shootBullet(i);
 	}

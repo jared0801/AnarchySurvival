@@ -33,7 +33,8 @@ Database.isUsernameTaken = (data, cb) => {
 Database.addUser = (data, cb) => {
     if(!USE_DB) return cb();
     db.account.insert({ username: data.username,
-                        password: data.password }, (err) => {
+                        password: data.password,
+                        gender: data.gender }, (err) => {
         Database.savePlayerProgress({ username: data.username, items: [], friends: {}}, function() {
             cb();
         });
@@ -48,8 +49,17 @@ Database.getPlayerProgress = function(username, cb) {
             console.log(err);
         if(!res)
             return cb({ items: [], friends: {} })
-        else
-            return cb({ items: res.items, friends: res.friends });
+        else {
+            let progress = { items: res.items, friends: res.friends, x: res.x, y: res.y, mapName: res.map, score: res.score, gender: 0 };
+            db.account.findOne({ username: username }, function(err, res) {
+                if(err) console.log(err);
+                if(!res) return cb(progress);
+                else {
+                    if(res.gender) progress.gender = res.gender;
+                    return cb(progress);
+                }
+            })
+        }
     });
 }
 

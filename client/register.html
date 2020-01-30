@@ -1,0 +1,45 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, user-scalable=no" />
+        <link rel="stylesheet" href="client/styles.css">
+    </head>
+    <body>
+        <div id="headerDiv">
+            <a href="/"><h1 id="header">Anarchy Survivor!</h1></a>
+        </div>
+
+        <div id="regDiv">
+            <h2>Register an account</h2>
+            <div id="errorDiv"></div>
+            <div class="regFormDiv" id="emailDiv">
+                Email: <input id="regDiv-email" type="text">
+            </div>
+            <div class="regFormDiv" id="usernameDiv">
+                Username: <input id="regDiv-username" type="text">
+            </div>
+            <div class="regFormDiv" id="passwordDiv">
+                Password: <input id="regDiv-password" type="password">
+            </div>
+            <div class="regFormDiv" id="confPasswordDiv">
+                Confirm Password: <input id="regDiv-confPassword" type="password">
+            </div>
+            <div class="regFormDiv" id="genderDiv">
+                Character Gender:
+                <select id="regDiv-gender">
+                    <option value="0">Male</option>
+                    <option value="1">Female</option>
+                </select>
+            </div>
+            <div class="regFormDiv" id="buttonDiv">
+                <button class="button" id="regDiv-signUp"><span>Submit </span></button>
+            </div>
+        </div>
+    </body>
+</html>
+
+<script src="/client/js/Socket.js"></script>
+<script type="module">
+    let socket = io();
+    import { SignUp } from './client/js/Auth.js';
+    new SignUp(socket);
+</script>

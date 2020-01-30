@@ -7,6 +7,10 @@
     "dev": "nodemon server/app.js",
     "start": "node server/app.js"
   },
+  "nodemonConfig": {
+    "verbose": true,
+    "ignore": ["client/", "unused/"]
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {

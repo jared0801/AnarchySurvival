@@ -2,7 +2,7 @@ body {
     overflow: hidden;
     margin: 0;
     -webkit-tap-highlight-color:  rgba(0, 0, 0, 0);
-    background-color: rgba(150,150,150,1);
+    background-color: #525252;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     -khtml-user-select: none;
@@ -18,9 +18,87 @@ body {
     -ms-transform: translate(-50%, -50%);
     transform: translate(-50%, -50%);
     text-align: center;
+    color: lightgray;
 }
 
-#usernameDiv, #passwordDiv, #buttonDiv {
+#header {
+    color: lightgray;
+}
+
+#headerDiv {
+    text-align: center;
+    padding: 5px;
+}
+
+#headerDiv a {
+    text-decoration: underline;
+    text-decoration-color: lightgray;
+}
+
+.gameBtn {
+    display: inline-block;
+    border-radius: 4px;
+    background-color: #313131;
+    border: none;
+    font-size: 1em;
+    color: #ca3e47;
+    text-align: center;
+    padding: 10px;
+    cursor: pointer;
+    margin: 5px;
+}
+
+.button {
+    display: inline-block;
+    border-radius: 4px;
+    background-color: #313131;
+    border: none;
+    font-size: 1em;
+    width: 100px;
+    color: #ca3e47;
+    text-align: center;
+    padding: 10px;
+    transition: all 0.5s;
+    cursor: pointer;
+    margin: 5px;
+}
+
+.button span {
+  cursor: pointer;
+  display: inline-block;
+  position: relative;
+  transition: 0.5s;
+}
+
+.button span:after {
+  content: '\00bb';
+  position: absolute;
+  opacity: 0;
+  top: 0;
+  right: -20px;
+  transition: 0.5s;
+}
+
+.button:hover span {
+  padding-right: 15px;
+}
+
+.button:hover span:after {
+  opacity: 1;
+  right: 0;
+}
+
+#regDiv {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    -ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: lightgray;
+}
+
+.regFormDiv {
     padding: 10px;
 }
 
@@ -34,7 +112,7 @@ body {
     width: 100%;
 }
 
-#ctx, #ctx-ui {
+#canvas, #canvas-ui {
     position: absolute;
     border:1px solid #000000;
 }
@@ -106,7 +184,7 @@ body {
 }
 
 @media only screen and (max-width: 900px) {
-    #game, #ctx, #ctx-ui, #ui {
+    #game, #canvas, #canvas-ui, #ui {
         width: 100%;
     }
     .movementBtn {
