@@ -7,7 +7,9 @@ let Img = {
     player: [new Image(), new Image()],
     bullet: new Image(),
     enemy: [new Image(), new Image()],
-    portal: new Image()
+    portal: new Image(),
+    potion: new Image(),
+    coin: new Image()
 };
 Img.player[0].src = '/client/img/bobby.png';
 Img.player[1].src = '/client/img/betty.png';
@@ -15,6 +17,8 @@ Img.bullet.src = '/client/img/bullet4.png';
 Img.enemy[0].src = '/client/img/bat2.png';
 Img.enemy[1].src = '/client/img/gladiator.png';
 Img.portal.src = '/client/img/portal.png';
+Img.potion.src = '/client/img/potion.png';
+Img.coin.src = '/client/img/coin.png';
 
 export class Player {
     static list = {};
@@ -32,8 +36,9 @@ export class Player {
         this.friends = new Set([]);
         this.srcX = 0;
         this.srcY = 0;
-        this.direction = 2;
+        this.direction = 0;
         this.isMoving = false;
+        this.aimAngle = 0;
         selfId = sid;
         if(socket == null) {
             socket = sock;
@@ -59,15 +64,29 @@ export class Player {
         if(this.srcY >= Img.player[this.gender].height || this.isMoving == false) {
             this.srcY = 0;
         }
-            
-        if(this.direction === 0)
-            this.srcX = 0;
-        if(this.direction === 1)
-            this.srcX = 48;
-        if(this.direction === 2)
+
+        // Changes player direction based on mouse position
+        /*this.direction = 1;
+        this.srcX = 48;
+        if(this.aimAngle >= 45 && this.aimAngle <= 135) {
             this.srcX = 96;
-        if(this.direction === 3)
+            this.direction = 2;
+        } if(this.aimAngle >= 135 && this.aimAngle <= 225) {
             this.srcX = 144;
+            this.direction = 3;
+        } if(this.aimAngle >= 225 && this.aimAngle <= 315) {
+            this.srcX = 0;
+            this.direction = 0;
+        }*/
+        if(this.direction === 0) {
+            this.srcX = 0;
+        } else if(this.direction === 1) {
+            this.srcX = 48;
+        } else if(this.direction === 2) {
+            this.srcX = 96;
+        } else if(this.direction === 3) {
+            this.srcX = 144;
+        }
 
         ctx.drawImage(Img.player[this.gender], this.srcX, this.srcY, 48, 48, x - width/2, y - height/2, width, height);
 
@@ -139,9 +158,9 @@ export class Enemy {
             let width = 64;
             let height = 64;
 
-            if(this.srcX >= Img.player[Player.list[selfId].gender].width) {
+            /*if(this.srcX >= Img.player[Player.list[selfId].gender].width) {
                 this.srcX = 0;
-            }
+            }*/
             
             if(this.direction === 0)
                 this.srcY = 0;
@@ -157,9 +176,9 @@ export class Enemy {
             let width = 64;
             let height = 64;
 
-            if(this.srcX >= Img.player[Player.list[selfId].gender].width) {
+            /*if(this.srcX >= Img.player[Player.list[selfId].gender].width) {
                 this.srcX = 0;
-            }
+            }*/
             if(this.isMoving) {
                 this.srcY = 32;
             } else {
@@ -223,6 +242,58 @@ export class Portal {
         let y = this.y - Player.list[selfId].y + HEIGHT/2;
 
         ctx.drawImage(Img.portal, this.srcX, 0, 32, 32, x - width/2, y - height/2, width, height);
+    }
+
+}
+
+export class Potion {
+    static list = {};
+    constructor(initPack) {
+        this.id = initPack.id;
+        this.x = initPack.x;
+        this.y = initPack.y;
+        this.mapName = initPack.mapName;
+
+        Potion.list[this.id] = this;
+    }
+
+    draw(WIDTH, HEIGHT) {
+        // Only show potions on the same map
+        if(Player.list[selfId].mapName !== this.mapName) return;
+
+        let width = Img.potion.width; // Makes image 2x smaller
+        let height = Img.potion.height;
+
+        let x = this.x - Player.list[selfId].x + WIDTH/2;
+        let y = this.y - Player.list[selfId].y + HEIGHT/2;
+
+        ctx.drawImage(Img.potion, 0, 0, 32, 32, x - width/2, y - height/2, width, height);
+    }
+
+}
+
+export class Coin {
+    static list = {};
+    constructor(initPack) {
+        this.id = initPack.id;
+        this.x = initPack.x;
+        this.y = initPack.y;
+        this.mapName = initPack.mapName;
+
+        Coin.list[this.id] = this;
+    }
+
+    draw(WIDTH, HEIGHT) {
+        // Only show coins on the same map
+        if(Player.list[selfId].mapName !== this.mapName) return;
+
+        let width = Img.coin.width / 2; // Makes image 2x smaller
+        let height = Img.coin.height / 2;
+
+        let x = this.x - Player.list[selfId].x + WIDTH/2;
+        let y = this.y - Player.list[selfId].y + HEIGHT/2;
+
+        ctx.drawImage(Img.coin, 0, 0, 32, 32, x - width/2, y - height/2, width, height);
     }
 
 }

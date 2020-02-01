@@ -2,8 +2,8 @@
 let Inventory = require('../client/js/Inventory.js');
 let Maps = require('./Maps.js');
 
-let initPack = { player: [], bullet: [], enemy: [], portal: [] };
-let removePack = { player: [], bullet: [], enemy: [] };
+let initPack = { player: [], bullet: [], enemy: [], portal: [], potion: [], coin: [] };
+let removePack = { player: [], bullet: [], enemy: [], potion: [], coin: [] };
 
 class Entity {
     constructor(param) {
@@ -38,18 +38,24 @@ class Entity {
                 player: initPack.player,
                 bullet: initPack.bullet,
                 enemy: initPack.enemy,
-                portal: initPack.portal
+                portal: initPack.portal,
+                potion: initPack.potion,
+                coin: initPack.coin
             },
             removePack: {
                 player: removePack.player,
                 bullet: removePack.bullet,
-                enemy: removePack.enemy
+                enemy: removePack.enemy,
+                potion: removePack.potion,
+                coin: removePack.coin
             },
             updatePack: {
                 player: Player.update(),
                 bullet: Bullet.update(),
                 enemy: Enemy.update(),
-                portal: Portal.update()
+                portal: Portal.update(),
+                potion: Potion.update(),
+                coin: Coin.update()
             }
         }
         
@@ -57,9 +63,13 @@ class Entity {
         initPack.bullet = [];
         initPack.enemy = [];
         initPack.portal = [];
+        initPack.potion = [];
+        initPack.coin = [];
         removePack.player = [];
         removePack.bullet = [];
         removePack.enemy = [];
+        removePack.potion = [];
+        removePack.coin = [];
     
         return pack;
     }
@@ -145,8 +155,8 @@ class Player extends Entity {
         this.friends[friendUsername] = 0;
     }
     shootBullet = function(angle) {
-        if(Math.random() < 0.1)
-            this.inventory.addItem('potion', 1);
+        //if(Math.random() < 0.1)
+            //this.inventory.addItem('potion', 1);
         new Bullet({
             parent: this.id,
             angle,
@@ -171,11 +181,11 @@ class Player extends Entity {
         else
             this.spdY = 0;
 
-        if(this.spdY > 0 && this.spdY >= this.spdX) this.direction = 0;
+        /*if(this.spdY > 0 && this.spdY >= this.spdX) this.direction = 0;
         else if(this.spdY < 0 && this.spdY <= this.spdX) this.direction = 2;
 
         if(this.spdX > 0 && this.spdX >= this.spdY) this.direction = 3;
-        else if(this.spdX < 0 && this.spdX <= this.spdY) this.direction = 1;
+        else if(this.spdX < 0 && this.spdX <= this.spdY) this.direction = 1;*/
     }
 
     getInitPack = function() {
@@ -215,7 +225,9 @@ class Player extends Entity {
             player: Player.getAllInitPack(),
             bullet: Bullet.getAllInitPack(),
             enemy: Enemy.getAllInitPack(),
-            portal: Portal.getAllInitPack()
+            portal: Portal.getAllInitPack(),
+            potion: Potion.getAllInitPack(),
+            coin: Coin.getAllInitPack()
         });
     }
 
@@ -248,18 +260,31 @@ Player.onConnect = function(socket, username, progress, account) {
     player.inventory.refreshRender();
 
     socket.on('keyPress', (data) => {
-        if(data.inputId === 'left')
+        if(data.inputId === 'left') {
             player.pressingLeft = data.state;
-        else if(data.inputId === 'right')
+        } else if(data.inputId === 'right') {
             player.pressingRight = data.state;
-        else if(data.inputId === 'up')
+        } else if(data.inputId === 'up') {
             player.pressingUp = data.state;
-        else if(data.inputId === 'down')
+        } else if(data.inputId === 'down') {
             player.pressingDown = data.state;
-        else if(data.inputId === 'attack')
+        } else if(data.inputId === 'attack') {
             player.pressingAttack = data.state;
-        else if(data.inputId === 'mouseAngle')
+        } else if(data.inputId === 'mouseAngle') {
             player.mouseAngle = data.state;
+            let angle = player.mouseAngle + 180;
+
+            if(angle >= 45 && angle <= 135) {
+                player.direction = 2;
+            } else if(angle >= 135 && angle <= 225) {
+                player.direction = 3;
+            } else if(angle >= 225 && angle <= 315) {
+                player.direction = 0;
+            } else {
+                player.direction = 1;
+            }
+
+        }
     });
 
     socket.on('changeMap', (data) => {
@@ -408,6 +433,7 @@ class Enemy extends Entity {
                     p.socket.emit('addToChat', "You died and lost " + p.score + " points.");
                     p.score = 0;
                     p.hp = p.hpMax;
+                    p.mapName = 'forest';
                     p.x = Math.random() * Maps.list[p.mapName].width;
                     p.y = Math.random() * Maps.list[p.mapName].height;
                 }
@@ -418,11 +444,11 @@ class Enemy extends Entity {
         else this.isMoving = false;
 
         
-        if(this.spdY > 0 && this.spdY >= this.spdX) this.direction = 0;
+        /*if(this.spdY > 0 && this.spdY >= this.spdX) this.direction = 0;
         else if(this.spdY < 0 && this.spdY <= this.spdX) this.direction = 2;
 
         if(this.spdX > 0 && this.spdX >= this.spdY) this.direction = 3;
-        else if(this.spdX < 0 && this.spdX <= this.spdY) this.direction = 1;
+        else if(this.spdX < 0 && this.spdX <= this.spdY) this.direction = 1;*/
         
         super.update();
     }
@@ -542,6 +568,7 @@ class Bullet extends Entity{
                     p.socket.emit('addToChat', "You died and lost " + p.score + " points.");
                     p.score = 0;
                     p.hp = p.hpMax;
+                    p.mapName = 'forest';
                     p.x = Math.random() * Maps.list[p.mapName].width;
                     p.y = Math.random() * Maps.list[p.mapName].height;
                 }
@@ -640,18 +667,9 @@ class Portal extends Entity{
             if(this.mapName === p.mapName && this.getDistance(p) < 32) {
                 // Change map
                 p.changeMap();
-                console.log('changing map');
                 
             }
         }
-
-        // Check if hitting an enemy
-        /*for(let i in Enemy.list) {
-            var e = Enemy.list[i];
-            if(this.mapName === e.mapName && this.getDistance(e) < 32) {
-                
-            }
-        }*/
     }
     
     getInitPack() {
@@ -694,10 +712,172 @@ Portal.getAllInitPack = function() {
     return portals;
 }
 
+
+class Potion extends Entity{
+    static list = {};
+    static count = 0;
+    constructor(param) {
+        super(param);
+        this.id = Math.random();
+        this.toRemove = false;
+
+        Potion.count++;
+        Potion.list[this.id] = this;
+        initPack.potion.push(this.getInitPack());
+    }
+
+    update() {
+        super.update();
+
+        // Check if hitting a player
+        for(let i in Player.list) {
+            var p = Player.list[i];
+            if(this.mapName === p.mapName && this.getDistance(p) < 32) {
+                // Change map
+                p.inventory.addItem('potion', 1);
+                this.toRemove = true;
+                Potion.count--;
+            }
+        }
+    }
+    
+    getInitPack() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            mapName: this.mapName
+        };
+    }
+    
+    getUpdatePack() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            mapName: this.mapName
+        };
+    }
+}
+
+Potion.spawn = function(x, y, mapName) {
+    console.log('new potion at x: ' + x + ', y: ' + y + ' on ' + mapName);
+    new Potion({ x, y, mapName });
+}
+
+// Updates all potions in Potion.list
+Potion.update = function() {
+    
+    let pack = [];
+
+    for(let i in Potion.list) {
+        let potion = Potion.list[i];
+        potion.update();
+        if(potion.toRemove) {
+            delete Potion.list[i];
+            removePack.potion.push(potion.id);
+        } else {
+            pack.push(potion.getUpdatePack());
+        }
+        pack.push(potion.getUpdatePack());
+    }
+    return pack;
+}
+
+Potion.getAllInitPack = function() {
+    let potions = [];
+    for(let i in Potion.list) {
+        potions.push(Potion.list[i].getInitPack());
+    }
+    return potions;
+}
+
+
+class Coin extends Entity{
+    static list = {};
+    static count = 0;
+    constructor(param) {
+        super(param);
+        this.id = Math.random();
+        this.toRemove = false;
+        Coin.count++;
+
+        Coin.list[this.id] = this;
+        initPack.coin.push(this.getInitPack());
+    }
+
+    update() {
+        super.update();
+
+        // Check if hitting a player
+        for(let i in Player.list) {
+            var p = Player.list[i];
+            if(this.mapName === p.mapName && this.getDistance(p) < 32) {
+                // Change map
+                p.score += 5;
+                this.toRemove = true;
+                Coin.count--;
+            }
+        }
+    }
+    
+    getInitPack() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            mapName: this.mapName
+        };
+    }
+    
+    getUpdatePack() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            mapName: this.mapName
+        };
+    }
+}
+
+Coin.spawn = function(x, y, mapName) {
+    console.log('new coin at x: ' + x + ', y: ' + y + ' on ' + mapName);
+    new Coin({ x, y, mapName });
+}
+
+// Updates all coins in Coin.list
+Coin.update = function() {
+    
+    let pack = [];
+
+    for(let i in Coin.list) {
+        let coin = Coin.list[i];
+        coin.update();
+        if(coin.toRemove) {
+            delete Coin.list[i];
+            removePack.coin.push(coin.id);
+        } else {
+            pack.push(coin.getUpdatePack());
+        }
+        pack.push(coin.getUpdatePack());
+    }
+    return pack;
+}
+
+Coin.getAllInitPack = function() {
+    let coins = [];
+    for(let i in Coin.list) {
+        coins.push(Coin.list[i].getInitPack());
+    }
+    return coins;
+}
+
 module.exports = {
     Player,
     Enemy,
     Bullet,
     Portal,
-    Entity
+    Entity,
+    Potion,
+    Coin
 }

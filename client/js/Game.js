@@ -1,6 +1,6 @@
 import { SignIn } from './Auth.js';
 import { UI } from './UI.js';
-import { Player, Bullet, Enemy, Portal } from './Entities.js';
+import { Player, Bullet, Enemy, Portal, Potion, Coin } from './Entities.js';
 import { Maps } from './Maps.js';
 
 // Meta variables
@@ -13,6 +13,7 @@ new SignIn(socket);
 let inventory = new Inventory([], socket, false);
 let lastScore = null;
 let selfId = null;
+let player = null;
 let ui = new UI(socket, Player.list, selfId);
 let usedItem = false; // Prevents holding down an item key
 
@@ -38,8 +39,6 @@ let drawDisplay = function() {
     // Only draw once the player is logged in
     if(!selfId) return;
 
-    let player = Player.list[selfId];
-
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     Maps.list[player.mapName].draw(WIDTH, HEIGHT, player);
     drawScore();
@@ -57,26 +56,31 @@ let drawDisplay = function() {
     for(let i in Portal.list) {
         Portal.list[i].draw(WIDTH, HEIGHT);
     }
+    for(let i in Potion.list) {
+        Potion.list[i].draw(WIDTH, HEIGHT);
+    }
+    for(let i in Coin.list) {
+        Coin.list[i].draw(WIDTH, HEIGHT);
+    }
 }
 
 let drawScore = function() {
-    if(lastScore === Player.list[selfId].score) return;
+    if(!selfId) return;
+    if(lastScore === player.score) return;
 
-    lastScore = Player.list[selfId].score;
-    let scoreText = Player.list[selfId].score + " points";
+    lastScore = player.score;
+    let scoreText = player.score + " points";
     ctxUI.fillStyle = 'black';
     ctxUI.font = "20px Arial";
-    ctxUI.clearRect(0, 0, 100, 50);
+    ctxUI.clearRect(0, 0, 150, 50);
     ctxUI.fillText(scoreText, 10, 30);
 }
 
 let closeMenu = function() {
-    if(selfId) {
-        let player = Player.list[selfId];
-        if(player.menu) {
-            player.menu.remove();
-            player.menu = null;
-        }
+    if(!selfId) return;
+    if(player.menu) {
+        player.menu.remove();
+        player.menu = null;
     }
 }
 
@@ -122,10 +126,13 @@ let stopDown = function() {
 
 // init
 socket.on('init', (data) => {
-    if(data.selfId) selfId = data.selfId;
+    if(data.selfId) {
+        selfId = data.selfId;
+    }
     if(selfId) {
         for(let i = 0; i < data.player.length; i++) {
             new Player(data.player[i], selfId, socket);
+            player = Player.list[selfId];
         }
         for(let i = 0; i < data.bullet.length; i++) {
             new Bullet(data.bullet[i]);
@@ -135,6 +142,9 @@ socket.on('init', (data) => {
         }
         for(let i = 0; i < data.portal.length; i++) {
             new Portal(data.portal[i]);
+        }
+        for(let i = 0; i < data.potion.length; i++) {
+            new Potion(data.potion[i]);
         }
     }
 });
@@ -205,6 +215,32 @@ socket.on('update', (data) => {
             new Enemy(pack);
         }
     }
+    
+    for(let i = 0; i < data.potion.length; i++) {
+        let pack = data.potion[i];
+        let p = Potion.list[pack.id];
+        if(p) {
+            if(p.x !== undefined)
+                p.x = pack.x;
+            if(p.y !== undefined)
+                p.y = pack.y;
+        } else {
+            new Potion(pack);
+        }
+    }
+    
+    for(let i = 0; i < data.coin.length; i++) {
+        let pack = data.coin[i];
+        let c = Coin.list[pack.id];
+        if(c) {
+            if(c.x !== undefined)
+                c.x = pack.x;
+            if(c.y !== undefined)
+                c.y = pack.y;
+        } else {
+            new Coin(pack);
+        }
+    }
 });
 
 // remove
@@ -217,6 +253,12 @@ socket.on('remove', (data) => {
     }
     for(let i = 0; i < data.enemy.length; i++) {
         delete Enemy.list[data.enemy[i]];
+    }
+    for(let i = 0; i < data.potion.length; i++) {
+        delete Potion.list[data.potion[i]];
+    }
+    for(let i = 0; i < data.coin.length; i++) {
+        delete Coin.list[data.coin[i]];
     }
 });
 
@@ -331,7 +373,7 @@ document.ontouchstart = function(event) {
 }
 
 document.onmousedown = function(event) {
-    const self = Player.list[selfId];
+    if(!selfId) return;
     if(event.target.parentElement.id !== "playerMenu") {
         closeMenu();
     }
@@ -352,13 +394,13 @@ document.onmousedown = function(event) {
         }
     } else if(event.button === 2) {
         //let menu = document.getElementById('playerMenu');
-        if(self && !self.menu) {
+        if(!player.menu) {
             for(let i in Player.list) {
                 var p = Player.list[i];
 
-                const mouseX = event.clientX - WIDTH/2 + self.x;
-                const mouseY = event.clientY - HEIGHT/2 + self.y;
-                ui.friendReq(mouseX, mouseY, self, p);
+                const mouseX = event.clientX - WIDTH/2 + player.x;
+                const mouseY = event.clientY - HEIGHT/2 + player.y;
+                ui.friendReq(mouseX, mouseY, player, p);
             }
         }
     }
@@ -391,9 +433,11 @@ document.onmouseup = function(event) {
 }
 
 document.onmousemove = function(event) {
+    if(!selfId) return;
     var x = -(WIDTH/2) + event.clientX;
     var y = -(HEIGHT/2) + event.clientY;
     var angle = Math.atan2(y, x) / Math.PI * 180;
+    player.aimAngle = angle + 180;
     socket.emit('keyPress', { inputId: 'mouseAngle', state: angle });
 }
 
@@ -418,6 +462,7 @@ window.addEventListener('resize', () => {
 });
 
 window.addEventListener('beforeunload', () => {
+    if(!selfId) return;
     socket.emit('reqRemove');
-    socket.emit('logOut', { username: Player.list[selfId].username });
+    socket.emit('logOut', { username: player.username });
 });

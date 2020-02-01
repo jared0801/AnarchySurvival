@@ -4,7 +4,7 @@ let path = require('path');
 require('dotenv').config();
 
 let Database = require('./Database');
-let { Player, Enemy, Entity, Portal } = require('./Entity');
+let { Player, Enemy, Entity, Portal, Potion, Coin } = require('./Entity');
 let Maps = require('./Maps.js');
 
 new Maps('field', 1920, 1440);
@@ -134,3 +134,23 @@ setInterval(function() {
     if(Enemy.count < 30)
         Enemy.spawnEnemies(10, 'field');
 }, 10000)
+
+let itemSpawnRate = Math.random() * 20000 + 5000;
+setTimeout(function spawnItems() {
+    if(Potion.count < 10) {
+        let randX = Math.floor(Math.random() * Maps.list['field'].width)
+        let randY = Math.floor(Math.random() * Maps.list['field'].height)
+        Potion.spawn(randX, randY, 'field');
+    }
+    setTimeout(spawnItems, itemSpawnRate);
+}, itemSpawnRate);
+
+let coinSpawnRate = Math.random() * 20000 + 5000;
+setTimeout(function spawnItems() {
+    if(Coin.count <5) {
+        let randX = Math.floor(Math.random() * Maps.list['field'].width)
+        let randY = Math.floor(Math.random() * Maps.list['field'].height)
+        Coin.spawn(randX, randY, 'field');
+    }
+    setTimeout(spawnItems, coinSpawnRate);
+}, coinSpawnRate)

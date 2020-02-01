@@ -91,7 +91,6 @@ Item.list = {};
 Item("potion","Potion","z", function(player){
 	player.hp = 10;
 	player.inventory.removeItem("potion", 1);
-	player.inventory.addItem("superAttack", 1);
 });
 
 Item("superAttack","Super Attack", "x", function(player){

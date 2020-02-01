@@ -18,7 +18,6 @@ export class SignIn {
                 signDiv.style.display = 'none';
                 headerDiv.style.display = 'none';
                 gameDiv.style.display = 'inline-block';
-                this.socket.emit('reqInit');
             } else {
                 alert('Sign in unsuccessful');
             }
